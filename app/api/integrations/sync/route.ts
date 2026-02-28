@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dataForSEO } from "@/lib/integrations/dataforseo";
 import { frase } from "@/lib/integrations/frase";
+import { getKeywords as getLlmrefsKeywords } from "@/lib/integrations/llmrefs";
 import { RateLimitError } from "@/lib/integrations/base";
 
 export async function POST(request: NextRequest) {
@@ -81,6 +82,17 @@ export async function POST(request: NextRequest) {
             (results.serpAnalysis as unknown[]).push({ keyword: kw, data: analysis });
           }
         }
+        break;
+
+      case "llmrefs":
+        const { organizationId, projectId } = body;
+        if (!organizationId || !projectId) {
+          return NextResponse.json(
+            { error: "organizationId and projectId are required for LLMrefs sync" },
+            { status: 400 }
+          );
+        }
+        results.keywords = await getLlmrefsKeywords(organizationId, projectId, clientId);
         break;
 
       default:

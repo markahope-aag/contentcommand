@@ -26,6 +26,12 @@ const PROVIDERS = [
     description: "SERP analysis, URL analysis, and semantic keyword research.",
   },
   {
+    name: "LLMrefs",
+    provider: "llmrefs",
+    description:
+      "AI search visibility tracking — AEO/GEO analytics across ChatGPT, Perplexity, Gemini, and more.",
+  },
+  {
     name: "Google",
     provider: "google",
     description:

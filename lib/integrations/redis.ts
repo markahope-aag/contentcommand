@@ -34,6 +34,7 @@ export function getRateLimiter(provider: string): Ratelimit {
       dataforseo: { requests: 2000, window: "1 m" },
       frase: { requests: 500, window: "1 h" },
       google: { requests: 100, window: "1 m" },
+      llmrefs: { requests: 10, window: "1 m" },
     };
 
     const providerConfig = config[provider] || { requests: 60, window: "1 m" };

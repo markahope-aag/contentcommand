@@ -6,6 +6,7 @@ const RATE_LIMITS = [
   { provider: "DataForSEO", limit: "2,000/min", icon: "🔍" },
   { provider: "Frase", limit: "500/hr", icon: "📝" },
   { provider: "Google", limit: "100/min", icon: "📊" },
+  { provider: "LLMrefs", limit: "10/min", icon: "🤖" },
 ];
 
 export function RateLimitDisplay() {

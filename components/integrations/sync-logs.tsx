@@ -20,7 +20,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { ApiRequestLog } from "@/types/database";
 
-const PROVIDERS = ["all", "dataforseo", "otterly", "frase", "google"];
+const PROVIDERS = ["all", "dataforseo", "frase", "google", "llmrefs"];
 
 export function SyncLogs() {
   const [logs, setLogs] = useState<ApiRequestLog[]>([]);

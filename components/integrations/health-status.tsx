@@ -16,6 +16,7 @@ const providerNames: Record<string, string> = {
   dataforseo: "DataForSEO",
   frase: "Frase",
   google: "Google",
+  llmrefs: "LLMrefs",
 };
 
 export function HealthStatus({ healthData }: HealthStatusProps) {
