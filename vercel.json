@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-competitor-analysis",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

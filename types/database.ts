@@ -77,3 +77,75 @@ export type CompetitorUpdate = Partial<Omit<CompetitorInsert, "client_id">>;
 
 export type ContentBriefInsert = Omit<ContentBrief, "id" | "created_at">;
 export type ContentBriefUpdate = Partial<Omit<ContentBriefInsert, "client_id">>;
+
+// ── Stage 2: API Integration Layer ──────────────────────
+
+export interface ApiRequestLog {
+  id: string;
+  client_id: string | null;
+  provider: string;
+  endpoint: string;
+  status_code: number | null;
+  response_time_ms: number | null;
+  error_message: string | null;
+  request_metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export type ApiRequestLogInsert = Omit<ApiRequestLog, "id" | "created_at">;
+
+export interface CompetitiveAnalysis {
+  id: string;
+  client_id: string;
+  competitor_id: string | null;
+  analysis_type: "keyword_gap" | "domain_metrics" | "serp_overlap";
+  data: Record<string, unknown>;
+  expires_at: string;
+  created_at: string;
+}
+
+export type CompetitiveAnalysisInsert = Omit<CompetitiveAnalysis, "id" | "created_at">;
+export type CompetitiveAnalysisUpdate = Partial<Omit<CompetitiveAnalysisInsert, "client_id">>;
+
+export interface AiCitation {
+  id: string;
+  client_id: string;
+  platform: string;
+  query: string;
+  cited: boolean;
+  share_of_voice: number | null;
+  citation_url: string | null;
+  citation_context: string | null;
+  data: Record<string, unknown> | null;
+  tracked_at: string;
+}
+
+export type AiCitationInsert = Omit<AiCitation, "id" | "tracked_at">;
+
+export interface IntegrationHealth {
+  id: string;
+  provider: string;
+  status: "healthy" | "degraded" | "down" | "unknown";
+  last_success: string | null;
+  last_failure: string | null;
+  error_count: number;
+  avg_response_ms: number | null;
+  metadata: Record<string, unknown> | null;
+  updated_at: string;
+}
+
+export type IntegrationHealthUpdate = Partial<Omit<IntegrationHealth, "id">>;
+
+export interface GoogleOAuthToken {
+  id: string;
+  client_id: string;
+  encrypted_access_token: string;
+  encrypted_refresh_token: string;
+  token_expiry: string;
+  scopes: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type GoogleOAuthTokenInsert = Omit<GoogleOAuthToken, "id" | "created_at" | "updated_at">;
+export type GoogleOAuthTokenUpdate = Partial<Omit<GoogleOAuthTokenInsert, "client_id">>;
