@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PipelineStatus } from "@/components/content/pipeline-status";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAllContentBriefs, getContentPipelineStats } from "@/lib/supabase/queries";
+import { Lightbulb } from "lucide-react";
 
 export default async function ContentPage() {
   const [stats, recentBriefs] = await Promise.all([
@@ -35,9 +37,13 @@ export default async function ContentPage() {
           </CardHeader>
           <CardContent>
             {recent.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No content briefs yet. Create your first brief to get started.
-              </p>
+              <EmptyState
+                icon={Lightbulb}
+                title="No briefs yet"
+                description="Create your first content brief to start generating AI-powered content."
+                actionLabel="Create Brief"
+                actionHref="/dashboard/content/briefs/new"
+              />
             ) : (
               <div className="space-y-3">
                 {recent.map((brief) => (

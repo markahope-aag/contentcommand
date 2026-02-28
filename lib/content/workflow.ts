@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { invalidateCache } from "@/lib/cache";
 
 export type BriefStatus =
   | "draft"
@@ -59,6 +60,8 @@ export async function transitionBriefStatus(
     .eq("id", briefId);
 
   if (updateError) throw updateError;
+
+  await invalidateCache("cc:pipeline-stats:*", "cc:briefs:all", "cc:content-queue:all");
 }
 
 export async function approveBrief(briefId: string, userId: string): Promise<void> {
@@ -111,4 +114,6 @@ export async function submitReview(submission: ReviewSubmission): Promise<void> 
       .update({ status: briefStatus })
       .eq("id", content.brief_id);
   }
+
+  await invalidateCache("cc:pipeline-stats:*", "cc:briefs:all", "cc:content-queue:all");
 }

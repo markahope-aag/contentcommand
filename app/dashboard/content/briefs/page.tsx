@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BriefCard } from "@/components/content/brief-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAllContentBriefs } from "@/lib/supabase/queries";
+import { Lightbulb } from "lucide-react";
 
 export default async function BriefsPage() {
   const briefs = await getAllContentBriefs();
@@ -16,14 +18,13 @@ export default async function BriefsPage() {
       </div>
 
       {briefs.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            No content briefs yet. Create your first brief to get started.
-          </p>
-          <Button asChild>
-            <Link href="/dashboard/content/briefs/new">Create Brief</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={Lightbulb}
+          title="No content briefs"
+          description="Create your first brief to start generating AI-powered content for your clients."
+          actionLabel="Create Brief"
+          actionHref="/dashboard/content/briefs/new"
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {briefs.map((brief) => (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { ContentEditor } from "@/components/content/content-editor";
 import { QualityScoreDisplay } from "@/components/content/quality-score-display";
 import { ReviewPanel } from "@/components/content/review-panel";
@@ -83,9 +84,9 @@ function ScoreButton({ contentId }: { contentId: string }) {
         }
       }}
     >
-      <Button type="submit" variant="outline">
+      <SubmitButton variant="outline" loadingText="Scoring...">
         Run Quality Scoring
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

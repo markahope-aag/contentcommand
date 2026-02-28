@@ -1,4 +1,5 @@
 import { createClient } from "./server";
+import { withCache, invalidateCache } from "@/lib/cache";
 import type {
   Client,
   ClientInsert,
@@ -115,14 +116,16 @@ export async function removeOrganizationMember(orgId: string, userId: string): P
 // ── Clients ──────────────────────────────────────────────
 
 export async function getClients(): Promise<Client[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .order("created_at", { ascending: false });
+  return withCache("cc:clients:all", async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
+  }, 300);
 }
 
 export async function getClient(id: string): Promise<Client | null> {
@@ -152,6 +155,7 @@ export async function createClientWithOwner(
   });
 
   if (error) throw error;
+  await invalidateCache("cc:clients:all");
   return data;
 }
 
@@ -168,6 +172,7 @@ export async function updateClient(
     .single();
 
   if (error) throw error;
+  await invalidateCache("cc:clients:all");
   return data;
 }
 
@@ -175,20 +180,23 @@ export async function deleteClient(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) throw error;
+  await invalidateCache("cc:clients:all");
 }
 
 // ── Competitors ──────────────────────────────────────────
 
 export async function getCompetitors(clientId: string): Promise<Competitor[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("competitors")
-    .select("*")
-    .eq("client_id", clientId)
-    .order("competitive_strength", { ascending: false });
+  return withCache(`cc:competitors:${clientId}`, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("competitors")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("competitive_strength", { ascending: false });
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
+  }, 300);
 }
 
 export async function createCompetitor(
@@ -202,6 +210,7 @@ export async function createCompetitor(
     .single();
 
   if (error) throw error;
+  await invalidateCache(`cc:competitors:${competitor.client_id}`);
   return data;
 }
 
@@ -218,13 +227,15 @@ export async function updateCompetitor(
     .single();
 
   if (error) throw error;
+  await invalidateCache(`cc:competitors:${data.client_id}`);
   return data;
 }
 
-export async function deleteCompetitor(id: string): Promise<void> {
+export async function deleteCompetitor(id: string, clientId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("competitors").delete().eq("id", id);
   if (error) throw error;
+  await invalidateCache(`cc:competitors:${clientId}`);
 }
 
 // ── Content Briefs ───────────────────────────────────────
@@ -246,19 +257,26 @@ export async function getAllContentBriefs(filters?: {
   status?: string;
   priorityLevel?: string;
 }): Promise<ContentBrief[]> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("content_briefs")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const hasFilters = filters?.clientId || filters?.status || filters?.priorityLevel;
+  const fetcher = async () => {
+    const supabase = await createClient();
+    let query = supabase
+      .from("content_briefs")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (filters?.clientId) query = query.eq("client_id", filters.clientId);
-  if (filters?.status) query = query.eq("status", filters.status);
-  if (filters?.priorityLevel) query = query.eq("priority_level", filters.priorityLevel);
+    if (filters?.clientId) query = query.eq("client_id", filters.clientId);
+    if (filters?.status) query = query.eq("status", filters.status);
+    if (filters?.priorityLevel) query = query.eq("priority_level", filters.priorityLevel);
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
+  // Only cache the no-filter variant
+  if (hasFilters) return fetcher();
+  return withCache("cc:briefs:all", fetcher, 60);
 }
 
 export async function getContentBriefs(
@@ -284,6 +302,7 @@ export async function createContentBrief(brief: ContentBriefInsert): Promise<Con
     .single();
 
   if (error) throw error;
+  await invalidateCache("cc:briefs:all", "cc:pipeline-stats:*", "cc:content-queue:all");
   return data;
 }
 
@@ -300,6 +319,7 @@ export async function updateContentBrief(
     .single();
 
   if (error) throw error;
+  await invalidateCache("cc:briefs:all", "cc:pipeline-stats:*", "cc:content-queue:all");
   return data;
 }
 
@@ -307,6 +327,7 @@ export async function deleteContentBrief(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("content_briefs").delete().eq("id", id);
   if (error) throw error;
+  await invalidateCache("cc:briefs:all", "cc:pipeline-stats:*", "cc:content-queue:all");
 }
 
 // ── Generated Content ───────────────────────────────────
@@ -351,18 +372,25 @@ export async function getContentQueue(filters?: {
   clientId?: string;
   status?: string;
 }): Promise<(GeneratedContent & { content_briefs: ContentBrief })[]> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("generated_content")
-    .select("*, content_briefs(*)")
-    .order("created_at", { ascending: false });
+  const hasFilters = filters?.clientId || filters?.status;
+  const fetcher = async () => {
+    const supabase = await createClient();
+    let query = supabase
+      .from("generated_content")
+      .select("*, content_briefs(*)")
+      .order("created_at", { ascending: false });
 
-  if (filters?.clientId) query = query.eq("client_id", filters.clientId);
-  if (filters?.status) query = query.eq("status", filters.status);
+    if (filters?.clientId) query = query.eq("client_id", filters.clientId);
+    if (filters?.status) query = query.eq("status", filters.status);
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as (GeneratedContent & { content_briefs: ContentBrief })[];
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as (GeneratedContent & { content_briefs: ContentBrief })[];
+  };
+
+  // Only cache the no-filter variant
+  if (hasFilters) return fetcher();
+  return withCache("cc:content-queue:all", fetcher, 60);
 }
 
 export async function updateGeneratedContent(
@@ -378,6 +406,7 @@ export async function updateGeneratedContent(
     .single();
 
   if (error) throw error;
+  await invalidateCache("cc:content-queue:all", "cc:pipeline-stats:*");
   return data;
 }
 
@@ -419,41 +448,44 @@ export async function getAiUsageSummary(clientId?: string): Promise<{
   byProvider: Record<string, { cost: number; calls: number }>;
   byOperation: Record<string, { cost: number; calls: number }>;
 }> {
-  const supabase = await createClient();
-  let query = supabase.from("ai_usage_tracking").select("*");
-  if (clientId) query = query.eq("client_id", clientId);
+  const cacheKey = clientId ? `cc:ai-usage:${clientId}` : "cc:ai-usage:global";
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    let query = supabase.from("ai_usage_tracking").select("*");
+    if (clientId) query = query.eq("client_id", clientId);
 
-  const { data, error } = await query;
-  if (error) throw error;
+    const { data, error } = await query;
+    if (error) throw error;
 
-  const records = data as AiUsageTracking[];
-  const summary = {
-    totalCost: 0,
-    totalInputTokens: 0,
-    totalOutputTokens: 0,
-    byProvider: {} as Record<string, { cost: number; calls: number }>,
-    byOperation: {} as Record<string, { cost: number; calls: number }>,
-  };
+    const records = data as AiUsageTracking[];
+    const summary = {
+      totalCost: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      byProvider: {} as Record<string, { cost: number; calls: number }>,
+      byOperation: {} as Record<string, { cost: number; calls: number }>,
+    };
 
-  for (const r of records) {
-    summary.totalCost += Number(r.estimated_cost_usd);
-    summary.totalInputTokens += r.input_tokens;
-    summary.totalOutputTokens += r.output_tokens;
+    for (const r of records) {
+      summary.totalCost += Number(r.estimated_cost_usd);
+      summary.totalInputTokens += r.input_tokens;
+      summary.totalOutputTokens += r.output_tokens;
 
-    if (!summary.byProvider[r.provider]) {
-      summary.byProvider[r.provider] = { cost: 0, calls: 0 };
+      if (!summary.byProvider[r.provider]) {
+        summary.byProvider[r.provider] = { cost: 0, calls: 0 };
+      }
+      summary.byProvider[r.provider].cost += Number(r.estimated_cost_usd);
+      summary.byProvider[r.provider].calls += 1;
+
+      if (!summary.byOperation[r.operation]) {
+        summary.byOperation[r.operation] = { cost: 0, calls: 0 };
+      }
+      summary.byOperation[r.operation].cost += Number(r.estimated_cost_usd);
+      summary.byOperation[r.operation].calls += 1;
     }
-    summary.byProvider[r.provider].cost += Number(r.estimated_cost_usd);
-    summary.byProvider[r.provider].calls += 1;
 
-    if (!summary.byOperation[r.operation]) {
-      summary.byOperation[r.operation] = { cost: 0, calls: 0 };
-    }
-    summary.byOperation[r.operation].cost += Number(r.estimated_cost_usd);
-    summary.byOperation[r.operation].calls += 1;
-  }
-
-  return summary;
+    return summary;
+  }, 300);
 }
 
 // ── Pipeline Stats ──────────────────────────────────────
@@ -461,31 +493,36 @@ export async function getAiUsageSummary(clientId?: string): Promise<{
 export async function getContentPipelineStats(clientId?: string): Promise<
   Record<string, number>
 > {
-  const supabase = await createClient();
-  let query = supabase.from("content_briefs").select("status");
-  if (clientId) query = query.eq("client_id", clientId);
+  const cacheKey = clientId ? `cc:pipeline-stats:${clientId}` : "cc:pipeline-stats:global";
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    let query = supabase.from("content_briefs").select("status");
+    if (clientId) query = query.eq("client_id", clientId);
 
-  const { data, error } = await query;
-  if (error) throw error;
+    const { data, error } = await query;
+    if (error) throw error;
 
-  const stats: Record<string, number> = {};
-  for (const row of data) {
-    stats[row.status] = (stats[row.status] || 0) + 1;
-  }
-  return stats;
+    const stats: Record<string, number> = {};
+    for (const row of data) {
+      stats[row.status] = (stats[row.status] || 0) + 1;
+    }
+    return stats;
+  }, 60);
 }
 
 // ── Integration Health ──────────────────────────────────
 
 export async function getIntegrationHealth(): Promise<IntegrationHealth[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("integration_health")
-    .select("*")
-    .order("provider");
+  return withCache("cc:integration-health:all", async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("integration_health")
+      .select("*")
+      .order("provider");
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
+  }, 900);
 }
 
 // ── API Request Logs ────────────────────────────────────
@@ -494,20 +531,26 @@ export async function getApiRequestLogs(
   provider?: string,
   limit = 50
 ): Promise<ApiRequestLog[]> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("api_request_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  // Only cache default params (no provider filter, default limit)
+  const fetcher = async () => {
+    const supabase = await createClient();
+    let query = supabase
+      .from("api_request_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (provider) {
-    query = query.eq("provider", provider);
-  }
+    if (provider) {
+      query = query.eq("provider", provider);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
+  if (provider || limit !== 50) return fetcher();
+  return withCache("cc:api-logs:all", fetcher, 900);
 }
 
 // ── Google OAuth Status ─────────────────────────────────

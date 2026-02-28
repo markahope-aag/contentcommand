@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,10 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import type { Client } from "@/types/database";
 
 export default function NewBriefPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +51,8 @@ export default function NewBriefPage() {
         .select("*")
         .order("name");
       setClients(data || []);
-    } catch {
-      // Silently handle — clients dropdown may be empty
+    } catch (err) {
+      console.error("Failed to load clients:", err);
     }
   }
 
@@ -73,9 +75,12 @@ export default function NewBriefPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Generation failed");
+      toast({ title: "Brief generated", description: "Your AI-powered brief is ready." });
       router.push(`/dashboard/content/briefs/${data.data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      toast({ title: "Generation failed", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -108,9 +113,12 @@ export default function NewBriefPage() {
         .single();
 
       if (insertError) throw insertError;
+      toast({ title: "Brief created", description: "Your content brief has been saved." });
       router.push(`/dashboard/content/briefs/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      toast({ title: "Creation failed", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -121,7 +129,7 @@ export default function NewBriefPage() {
       <h1 className="text-3xl font-bold">New Content Brief</h1>
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -188,13 +196,14 @@ export default function NewBriefPage() {
                   onChange={(e) => setTargetKeyword(e.target.value)}
                 />
               </div>
-              <Button
+              <LoadingButton
                 onClick={handleAiGenerate}
-                disabled={loading}
+                loading={loading}
+                loadingText="Generating Brief..."
                 className="w-full"
               >
-                {loading ? "Generating Brief..." : "Generate Brief with AI"}
-              </Button>
+                Generate Brief with AI
+              </LoadingButton>
             </CardContent>
           </Card>
         </TabsContent>
@@ -251,13 +260,14 @@ export default function NewBriefPage() {
                   onChange={(e) => setManualWordCount(e.target.value)}
                 />
               </div>
-              <Button
+              <LoadingButton
                 onClick={handleManualCreate}
-                disabled={loading}
+                loading={loading}
+                loadingText="Creating..."
                 className="w-full"
               >
-                {loading ? "Creating..." : "Create Brief"}
-              </Button>
+                Create Brief
+              </LoadingButton>
             </CardContent>
           </Card>
         </TabsContent>

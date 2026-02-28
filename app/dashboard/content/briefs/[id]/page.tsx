@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Sparkles } from "lucide-react";
 import { getContentBrief, getGeneratedContentByBrief } from "@/lib/supabase/queries";
 
 interface BriefDetailPageProps {
@@ -142,9 +145,11 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
         </CardHeader>
         <CardContent>
           {generatedContent.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No content generated yet.
-            </p>
+            <EmptyState
+              icon={Sparkles}
+              title="No content generated"
+              description="Approve this brief and generate AI-powered content from it."
+            />
           ) : (
             <div className="space-y-2">
               {generatedContent.map((gc) => (
@@ -232,7 +237,9 @@ function BriefActionButton({
         }
       }}
     >
-      <Button type="submit">{label}</Button>
+      <SubmitButton loadingText={action === "approve" ? "Approving..." : "Generating..."}>
+        {label}
+      </SubmitButton>
     </form>
   );
 }

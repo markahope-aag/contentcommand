@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronsUpDown, Plus, Building2 } from "lucide-react";
 
 export function OrgSwitcher() {
@@ -63,7 +64,7 @@ export function OrgSwitcher() {
     return (
       <div className="flex items-center gap-2 px-2 py-1.5">
         <Building2 className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+        <Skeleton className="h-4 w-28" />
       </div>
     );
   }

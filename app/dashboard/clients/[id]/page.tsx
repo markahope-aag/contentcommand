@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Swords } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -124,9 +126,11 @@ export default async function ClientDetailPage({
         </CardHeader>
         <CardContent>
           {competitors.length === 0 ? (
-            <p className="py-6 text-center text-muted-foreground">
-              No competitors tracked yet
-            </p>
+            <EmptyState
+              icon={Swords}
+              title="No competitors tracked"
+              description="Add competitors to monitor their SEO strategy and find content gaps."
+            />
           ) : (
             <Table>
               <TableHeader>

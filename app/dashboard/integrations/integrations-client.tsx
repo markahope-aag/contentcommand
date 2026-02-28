@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { ProviderCard } from "@/components/integrations/provider-card";
 import { GoogleConnect } from "@/components/integrations/google-connect";
 import { SyncLogs } from "@/components/integrations/sync-logs";
@@ -45,13 +46,12 @@ export function IntegrationsClient({
   connectedGoogleClientIds,
 }: IntegrationsClientProps) {
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleSync = async (provider: string) => {
     if (!clients.length) return;
 
     setSyncingProvider(provider);
-    setSyncError(null);
     try {
       const response = await fetch("/api/integrations/sync", {
         method: "POST",
@@ -66,10 +66,11 @@ export function IntegrationsClient({
         const data = await response.json().catch(() => null);
         throw new Error(data?.error || `Sync failed (${response.status})`);
       }
+
+      toast({ title: "Sync complete", description: `${provider} data synced successfully.` });
     } catch (error) {
       const message = error instanceof Error ? error.message : `Sync failed for ${provider}`;
-      setSyncError(message);
-      console.error(`Sync failed for ${provider}:`, error);
+      toast({ title: "Sync failed", description: message, variant: "destructive" });
     } finally {
       setSyncingProvider(null);
     }
@@ -80,9 +81,6 @@ export function IntegrationsClient({
 
   return (
     <div className="space-y-8">
-      {syncError && (
-        <p className="text-sm text-destructive">{syncError}</p>
-      )}
       <div className="space-y-2">
         <h2 className="text-lg font-medium">Providers</h2>
         <div className="grid gap-4 md:grid-cols-2">

@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getContentQueue } from "@/lib/supabase/queries";
+import { CheckCircle } from "lucide-react";
 
 export default async function ReviewPage() {
   const queue = await getContentQueue({ status: "generated" });
@@ -28,11 +30,13 @@ export default async function ReviewPage() {
       </div>
 
       {allItems.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            No content waiting for review.
-          </p>
-        </div>
+        <EmptyState
+          icon={CheckCircle}
+          title="Review queue is empty"
+          description="All caught up! Generate new content from a brief to populate the review queue."
+          actionLabel="View Briefs"
+          actionHref="/dashboard/content/briefs"
+        />
       ) : (
         <Table>
           <TableHeader>

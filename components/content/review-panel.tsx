@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReviewPanelProps {
   contentId: string;
@@ -16,11 +18,10 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
   const [notes, setNotes] = useState("");
   const [revisions, setRevisions] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleSubmit = async () => {
     setLoading(true);
-    setError(null);
     try {
       const response = await fetch(`/api/content/${contentId}/review`, {
         method: "PUT",
@@ -39,11 +40,16 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
         throw new Error(data?.error || "Review submission failed");
       }
 
+      toast({
+        title: action === "approve" ? "Content approved" : "Revisions requested",
+        description: action === "approve"
+          ? "Content has been approved and is ready for publishing."
+          : "Revision requests have been sent.",
+      });
       onReviewSubmitted?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Review submission failed";
-      setError(message);
-      console.error("Review error:", err);
+      toast({ title: "Review failed", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -96,16 +102,9 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
           </div>
         )}
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-        <Button onClick={handleSubmit} disabled={loading} className="w-full">
-          {loading
-            ? "Submitting..."
-            : action === "approve"
-            ? "Approve Content"
-            : "Request Revisions"}
-        </Button>
+        <LoadingButton onClick={handleSubmit} loading={loading} loadingText="Submitting..." className="w-full">
+          {action === "approve" ? "Approve Content" : "Request Revisions"}
+        </LoadingButton>
       </CardContent>
     </Card>
   );

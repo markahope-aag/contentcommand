@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PipelineStatus } from "@/components/content/pipeline-status";
+import { FileText } from "lucide-react";
 import {
   getContentPipelineStats,
   getContentQueue,
@@ -97,9 +99,13 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {recent5.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No content generated yet. Create a brief to get started.
-            </p>
+            <EmptyState
+              icon={FileText}
+              title="No content yet"
+              description="Create your first content brief to start generating AI-powered content."
+              actionLabel="Create Brief"
+              actionHref="/dashboard/content/briefs/new"
+            />
           ) : (
             <div className="space-y-3">
               {recent5.map((item) => (

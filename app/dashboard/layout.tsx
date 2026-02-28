@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth/actions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
-import { Toaster } from "@/components/ui/toaster";
 
 export default async function DashboardLayout({
   children,
@@ -24,7 +23,6 @@ export default async function DashboardLayout({
         </div>
         <div className="p-6">{children}</div>
       </main>
-      <Toaster />
     </SidebarProvider>
   );
 }

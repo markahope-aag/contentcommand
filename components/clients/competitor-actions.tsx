@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeString, sanitizeDomain } from "@/lib/sanitize";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,13 +25,12 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
   const [domain, setDomain] = useState("");
   const [strength, setStrength] = useState("5");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     const cleanName = sanitizeString(name);
     const cleanDomain = sanitizeDomain(domain);
@@ -44,8 +45,9 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
     });
 
     if (dbError) {
-      setError(dbError.message);
+      toast({ title: "Failed to add competitor", description: dbError.message, variant: "destructive" });
     } else {
+      toast({ title: "Competitor added", description: `${cleanName} is now being tracked.` });
       setOpen(false);
       setName("");
       setDomain("");
@@ -101,13 +103,10 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
               onChange={(e) => setStrength(e.target.value)}
             />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Competitor"}
-            </Button>
+            <LoadingButton type="submit" loading={loading} loadingText="Adding...">
+              Add Competitor
+            </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PipelineStatus } from "@/components/content/pipeline-status";
+import { FileText, BarChart3, Plug } from "lucide-react";
 import { AiUsageSummary } from "@/components/content/ai-usage-summary";
 import {
   getClients,
@@ -203,7 +205,13 @@ export default async function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {recentContent.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No content generated yet.</p>
+                <EmptyState
+                  icon={FileText}
+                  title="No content yet"
+                  description="Generate content from briefs to see it here."
+                  actionLabel="Create Brief"
+                  actionHref="/dashboard/content/briefs/new"
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -249,9 +257,13 @@ export default async function AnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {scoredContent.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No scored content yet. Generate and score content to see averages.
-                </p>
+                <EmptyState
+                  icon={BarChart3}
+                  title="No scored content"
+                  description="Generate and score content to see quality averages across all dimensions."
+                  actionLabel="View Content"
+                  actionHref="/dashboard/content"
+                />
               ) : (
                 <>
                   <ScoreBar label="Authority" score={avgScores.authority} />
@@ -270,7 +282,7 @@ export default async function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 {top5.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No scored content.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">No scored content yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {top5.map((item, i) => (
@@ -294,7 +306,7 @@ export default async function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 {bottom5.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No scored content.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">No scored content yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {bottom5.map((item, i) => (
@@ -318,10 +330,14 @@ export default async function AnalyticsPage() {
         <TabsContent value="integrations">
           {integrationHealth.length === 0 ? (
             <Card>
-              <CardContent className="py-6">
-                <p className="text-sm text-muted-foreground">
-                  No integration health data available. Configure integrations first.
-                </p>
+              <CardContent className="pt-6">
+                <EmptyState
+                  icon={Plug}
+                  title="No integrations configured"
+                  description="Connect your SEO and analytics tools to monitor their health and performance."
+                  actionLabel="Configure Integrations"
+                  actionHref="/dashboard/integrations"
+                />
               </CardContent>
             </Card>
           ) : (

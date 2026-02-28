@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeString, sanitizeSlug } from "@/lib/sanitize";
 import type { Organization, OrganizationMember } from "@/types/database";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,6 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrganizationSettingsPage() {
   const [org, setOrg] = useState<Organization | null>(null);
@@ -26,8 +28,7 @@ export default function OrganizationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadOrg();
@@ -67,14 +68,12 @@ export default function OrganizationSettingsPage() {
     e.preventDefault();
     if (!org) return;
     setSaving(true);
-    setError(null);
-    setSuccess(null);
 
     const cleanName = sanitizeString(name);
     const cleanSlug = sanitizeSlug(slug);
 
     if (!cleanName || !cleanSlug) {
-      setError("Name and slug are required.");
+      toast({ title: "Validation error", description: "Name and slug are required.", variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -86,9 +85,9 @@ export default function OrganizationSettingsPage() {
       .eq("id", org.id);
 
     if (updateError) {
-      setError(updateError.message);
+      toast({ title: "Update failed", description: updateError.message, variant: "destructive" });
     } else {
-      setSuccess("Organization updated successfully.");
+      toast({ title: "Organization updated", description: "Your changes have been saved." });
       setOrg({ ...org, name: cleanName, slug: cleanSlug });
     }
     setSaving(false);
@@ -97,13 +96,12 @@ export default function OrganizationSettingsPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
-    setError(null);
 
     const cleanName = sanitizeString(newOrgName);
     const cleanSlug = sanitizeSlug(newOrgSlug);
 
     if (!cleanName || !cleanSlug) {
-      setError("Name and slug are required.");
+      toast({ title: "Validation error", description: "Name and slug are required.", variant: "destructive" });
       setCreating(false);
       return;
     }
@@ -115,8 +113,9 @@ export default function OrganizationSettingsPage() {
     });
 
     if (createError) {
-      setError(createError.message);
+      toast({ title: "Creation failed", description: createError.message, variant: "destructive" });
     } else {
+      toast({ title: "Organization created", description: `${cleanName} is ready to use.` });
       localStorage.setItem("currentOrgId", data);
       setNewOrgName("");
       setNewOrgSlug("");
@@ -126,7 +125,23 @@ export default function OrganizationSettingsPage() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <Skeleton className="h-9 w-56" />
+        <div className="rounded-lg border p-6 space-y-4">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-64" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -142,16 +157,6 @@ export default function OrganizationSettingsPage() {
             </CardHeader>
             <form onSubmit={handleSave}>
               <CardContent className="space-y-4">
-                {error && (
-                  <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                    {error}
-                  </div>
-                )}
-                {success && (
-                  <div className="rounded-md bg-green-500/15 p-3 text-sm text-green-700">
-                    {success}
-                  </div>
-                )}
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization Name</Label>
                   <Input
@@ -172,9 +177,9 @@ export default function OrganizationSettingsPage() {
                     maxLength={100}
                   />
                 </div>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
+                <LoadingButton type="submit" loading={saving} loadingText="Saving...">
+                  Save Changes
+                </LoadingButton>
               </CardContent>
             </form>
           </Card>
@@ -188,7 +193,9 @@ export default function OrganizationSettingsPage() {
             </CardHeader>
             <CardContent>
               {members.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No members found.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No members found. Invite team members to collaborate.
+                </p>
               ) : (
                 <div className="space-y-3">
                   {members.map((member) => (
@@ -217,11 +224,6 @@ export default function OrganizationSettingsPage() {
           </CardHeader>
           <form onSubmit={handleCreate}>
             <CardContent className="space-y-4">
-              {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="new-org-name">Organization Name</Label>
                 <Input
@@ -247,9 +249,9 @@ export default function OrganizationSettingsPage() {
                   URL-friendly identifier. Use lowercase letters, numbers, and hyphens.
                 </p>
               </div>
-              <Button type="submit" disabled={creating}>
-                {creating ? "Creating..." : "Create Organization"}
-              </Button>
+              <LoadingButton type="submit" loading={creating} loadingText="Creating...">
+                Create Organization
+              </LoadingButton>
             </CardContent>
           </form>
         </Card>

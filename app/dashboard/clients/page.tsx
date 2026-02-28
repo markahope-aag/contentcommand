@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Users } from "lucide-react";
 
 export default async function ClientsPage() {
   const clients = await getClients();
@@ -24,11 +26,14 @@ export default async function ClientsPage() {
 
       {clients.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="mb-4 text-muted-foreground">No clients yet</p>
-            <Link href="/dashboard/clients/new">
-              <Button>Add your first client</Button>
-            </Link>
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={Users}
+              title="No clients yet"
+              description="Add your first client to start tracking their content strategy and SEO performance."
+              actionLabel="Add Client"
+              actionHref="/dashboard/clients/new"
+            />
           </CardContent>
         </Card>
       ) : (

@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeString, sanitizeDomain, sanitizeStringArray } from "@/lib/sanitize";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,19 +24,18 @@ export default function NewClientPage() {
   const [industry, setIndustry] = useState("");
   const [keywords, setKeywords] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     const cleanName = sanitizeString(name);
     const cleanDomain = sanitizeDomain(domain);
 
     if (!cleanName || !cleanDomain) {
-      setError("Name and domain are required.");
+      toast({ title: "Validation error", description: "Name and domain are required.", variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -61,9 +62,10 @@ export default function NewClientPage() {
     });
 
     if (error) {
-      setError(error.message);
+      toast({ title: "Failed to create client", description: error.message, variant: "destructive" });
       setLoading(false);
     } else {
+      toast({ title: "Client created", description: `${cleanName} has been added.` });
       router.push("/dashboard/clients");
       router.refresh();
     }
@@ -82,11 +84,6 @@ export default function NewClientPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="name">Client Name *</Label>
               <Input
@@ -134,9 +131,9 @@ export default function NewClientPage() {
               </p>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Create Client"}
-              </Button>
+              <LoadingButton type="submit" loading={loading} loadingText="Creating...">
+                Create Client
+              </LoadingButton>
               <Button
                 type="button"
                 variant="outline"

@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeString, sanitizeDomain, sanitizeStringArray } from "@/lib/sanitize";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -26,8 +29,8 @@ export default function EditClientPage() {
   const [industry, setIndustry] = useState("");
   const [keywords, setKeywords] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
   const supabase = createClient();
 
   useEffect(() => {
@@ -55,13 +58,12 @@ export default function EditClientPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     const cleanName = sanitizeString(name);
     const cleanDomain = sanitizeDomain(domain);
 
     if (!cleanName || !cleanDomain) {
-      setError("Name and domain are required.");
+      toast({ title: "Validation error", description: "Name and domain are required.", variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -82,16 +84,29 @@ export default function EditClientPage() {
       .eq("id", id);
 
     if (error) {
-      setError(error.message);
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
       setLoading(false);
     } else {
+      toast({ title: "Client updated", description: "Changes have been saved." });
       router.push(`/dashboard/clients/${id}`);
       router.refresh();
     }
   }
 
   if (!client) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <Skeleton className="h-9 w-40" />
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -105,11 +120,6 @@ export default function EditClientPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="name">Client Name *</Label>
               <Input
@@ -153,9 +163,9 @@ export default function EditClientPage() {
               </p>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
+              <LoadingButton type="submit" loading={loading} loadingText="Saving...">
+                Save Changes
+              </LoadingButton>
               <Button
                 type="button"
                 variant="outline"

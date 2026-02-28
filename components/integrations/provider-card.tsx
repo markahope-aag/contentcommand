@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import type { IntegrationHealth } from "@/types/database";
 
 interface ProviderCardProps {
@@ -56,9 +57,9 @@ export function ProviderCard({
         {children}
         <div className="flex gap-2 mt-3">
           {onSync && (
-            <Button size="sm" onClick={onSync} disabled={syncing}>
-              {syncing ? "Syncing..." : "Sync Now"}
-            </Button>
+            <LoadingButton size="sm" onClick={onSync} loading={syncing} loadingText="Syncing...">
+              Sync Now
+            </LoadingButton>
           )}
           {onConfigure && (
             <Button size="sm" variant="outline" onClick={onConfigure}>

@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import type { ApiRequestLog } from "@/types/database";
 
@@ -26,10 +27,12 @@ export function SyncLogs() {
   const [logs, setLogs] = useState<ApiRequestLog[]>([]);
   const [provider, setProvider] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchLogs() {
       setLoading(true);
+      setError(null);
       const supabase = createClient();
       let query = supabase
         .from("api_request_logs")
@@ -41,8 +44,13 @@ export function SyncLogs() {
         query = query.eq("provider", provider);
       }
 
-      const { data } = await query;
-      setLogs(data || []);
+      const { data, error: queryError } = await query;
+      if (queryError) {
+        setError(queryError.message);
+        setLogs([]);
+      } else {
+        setLogs(data || []);
+      }
       setLoading(false);
     }
 
@@ -76,8 +84,14 @@ export function SyncLogs() {
         </Select>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading logs...</p>
+      {error ? (
+        <p className="text-sm text-destructive">Failed to load logs: {error}</p>
+      ) : loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
       ) : logs.length === 0 ? (
         <p className="text-sm text-muted-foreground">No request logs found.</p>
       ) : (

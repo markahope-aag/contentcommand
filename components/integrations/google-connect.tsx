@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Select,
   SelectContent,
@@ -22,12 +23,11 @@ export function GoogleConnect({
 }: GoogleConnectProps) {
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleConnect = async () => {
     if (!selectedClient) return;
     setConnecting(true);
-    setError(null);
 
     try {
       const response = await fetch(
@@ -48,8 +48,7 @@ export function GoogleConnect({
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to connect Google";
-      setError(message);
-      console.error("Failed to initiate Google OAuth:", err);
+      toast({ title: "Connection failed", description: message, variant: "destructive" });
     } finally {
       setConnecting(false);
     }
@@ -72,20 +71,17 @@ export function GoogleConnect({
           </SelectContent>
         </Select>
       </div>
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
-      <Button
+      <LoadingButton
         size="sm"
         onClick={handleConnect}
-        disabled={!selectedClient || connecting}
+        loading={connecting}
+        loadingText="Connecting..."
+        disabled={!selectedClient}
       >
-        {connecting
-          ? "Connecting..."
-          : connectedClientIds.includes(selectedClient)
-            ? "Reconnect Google"
-            : "Connect Google"}
-      </Button>
+        {connectedClientIds.includes(selectedClient)
+          ? "Reconnect Google"
+          : "Connect Google"}
+      </LoadingButton>
     </div>
   );
 }
