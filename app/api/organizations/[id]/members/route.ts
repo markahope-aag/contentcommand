@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { addOrgMemberSchema, validateBody } from "@/lib/validations";
 
 export async function GET(
   _request: Request,
@@ -40,14 +41,9 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { userId, role = "member" } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(addOrgMemberSchema, body);
+    if (!validation.success) return validation.response;
+    const { userId, role } = validation.data;
 
     const { data, error } = await supabase
       .from("organization_members")

@@ -1,4 +1,5 @@
 import { BaseAPIIntegration, APIError } from "./base";
+import { serverEnv } from "@/lib/env";
 
 const BASE_URL = "https://api.dataforseo.com/v3";
 
@@ -12,12 +13,8 @@ export class DataForSEOClient extends BaseAPIIntegration {
   readonly provider = "dataforseo";
 
   private getAuthHeader(): string {
-    const login = process.env.DATAFORSEO_LOGIN;
-    const password = process.env.DATAFORSEO_PASSWORD;
-    if (!login || !password) {
-      throw new Error("Missing DataForSEO credentials");
-    }
-    return `Basic ${Buffer.from(`${login}:${password}`).toString("base64")}`;
+    const env = serverEnv();
+    return `Basic ${Buffer.from(`${env.DATAFORSEO_LOGIN}:${env.DATAFORSEO_PASSWORD}`).toString("base64")}`;
   }
 
   protected async makeRequest<T>(

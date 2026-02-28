@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { sanitizeString, sanitizeDomain, sanitizeStringArray } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,17 +57,26 @@ export default function EditClientPage() {
     setLoading(true);
     setError(null);
 
-    const keywordsArray = keywords
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean);
+    const cleanName = sanitizeString(name);
+    const cleanDomain = sanitizeDomain(domain);
+
+    if (!cleanName || !cleanDomain) {
+      setError("Name and domain are required.");
+      setLoading(false);
+      return;
+    }
+
+    const cleanIndustry = sanitizeString(industry) || null;
+    const keywordsArray = sanitizeStringArray(
+      keywords.split(",").map((k) => k.trim()).filter(Boolean)
+    );
 
     const { error } = await supabase
       .from("clients")
       .update({
-        name,
-        domain,
-        industry: industry || null,
+        name: cleanName,
+        domain: cleanDomain,
+        industry: cleanIndustry,
         target_keywords: keywordsArray.length > 0 ? keywordsArray : null,
       })
       .eq("id", id);
@@ -107,6 +117,7 @@ export default function EditClientPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                maxLength={200}
               />
             </div>
             <div className="space-y-2">
@@ -116,6 +127,7 @@ export default function EditClientPage() {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 required
+                maxLength={200}
               />
             </div>
             <div className="space-y-2">
@@ -124,6 +136,7 @@ export default function EditClientPage() {
                 id="industry"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">
@@ -133,6 +146,7 @@ export default function EditClientPage() {
                 value={keywords}
                 onChange={(e) => setKeywords(e.target.value)}
                 rows={3}
+                maxLength={1000}
               />
               <p className="text-xs text-muted-foreground">
                 Comma-separated list of target keywords

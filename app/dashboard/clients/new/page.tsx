@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { sanitizeString, sanitizeDomain, sanitizeStringArray } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,11 +30,21 @@ export default function NewClientPage() {
     setLoading(true);
     setError(null);
 
+    const cleanName = sanitizeString(name);
+    const cleanDomain = sanitizeDomain(domain);
+
+    if (!cleanName || !cleanDomain) {
+      setError("Name and domain are required.");
+      setLoading(false);
+      return;
+    }
+
+    const cleanIndustry = sanitizeString(industry) || null;
+    const keywordsArray = sanitizeStringArray(
+      keywords.split(",").map((k) => k.trim()).filter(Boolean)
+    );
+
     const supabase = createClient();
-    const keywordsArray = keywords
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean);
 
     // Get current org from localStorage
     const orgId = typeof window !== "undefined"
@@ -41,9 +52,9 @@ export default function NewClientPage() {
       : null;
 
     const { error } = await supabase.rpc("create_client_with_owner", {
-      client_name: name,
-      client_domain: domain,
-      client_industry: industry || null,
+      client_name: cleanName,
+      client_domain: cleanDomain,
+      client_industry: cleanIndustry,
       client_target_keywords: keywordsArray.length > 0 ? keywordsArray : null,
       client_brand_voice: null,
       p_org_id: orgId,
@@ -84,6 +95,7 @@ export default function NewClientPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Acme Corp"
                 required
+                maxLength={200}
               />
             </div>
             <div className="space-y-2">
@@ -94,6 +106,7 @@ export default function NewClientPage() {
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="acme.com"
                 required
+                maxLength={200}
               />
             </div>
             <div className="space-y-2">
@@ -103,6 +116,7 @@ export default function NewClientPage() {
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
                 placeholder="Technology, Healthcare, etc."
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">
@@ -113,6 +127,7 @@ export default function NewClientPage() {
                 onChange={(e) => setKeywords(e.target.value)}
                 placeholder="keyword1, keyword2, keyword3"
                 rows={3}
+                maxLength={1000}
               />
               <p className="text-xs text-muted-foreground">
                 Comma-separated list of target keywords

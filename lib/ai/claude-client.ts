@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getRateLimiter } from "@/lib/integrations/redis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { serverEnv } from "@/lib/env";
 import { RateLimitError } from "@/lib/integrations/base";
 import type { AiUsageTrackingInsert } from "@/types/database";
 
@@ -26,9 +27,7 @@ interface GenerateResult {
 }
 
 function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
-  return new Anthropic({ apiKey });
+  return new Anthropic({ apiKey: serverEnv().ANTHROPIC_API_KEY });
 }
 
 export async function generateWithClaude(options: GenerateOptions): Promise<GenerateResult> {

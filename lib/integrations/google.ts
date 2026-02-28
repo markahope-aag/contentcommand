@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { encrypt, decrypt } from "./crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { clientEnv, serverEnv } from "@/lib/env";
 import type { GoogleOAuthToken } from "@/types/database";
 
 const SCOPES = [
@@ -9,15 +10,11 @@ const SCOPES = [
 ];
 
 function getOAuth2Client() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing Google OAuth credentials");
-  }
+  const sEnv = serverEnv();
+  const appUrl = clientEnv().NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const redirectUri = `${appUrl}/api/integrations/google/callback`;
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/integrations/google/callback`;
-
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return new google.auth.OAuth2(sEnv.GOOGLE_CLIENT_ID, sEnv.GOOGLE_CLIENT_SECRET, redirectUri);
 }
 
 // ── OAuth Flow ──────────────────────────────────────────

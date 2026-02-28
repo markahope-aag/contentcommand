@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateContent } from "@/lib/ai/content-engine";
 import { RateLimitError } from "@/lib/integrations/base";
+import { contentGenerateSchema, validateBody } from "@/lib/validations";
 
 export async function POST(request: Request) {
   try {
@@ -12,14 +13,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { briefId, model } = body;
-
-    if (!briefId) {
-      return NextResponse.json(
-        { error: "briefId is required" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(contentGenerateSchema, body);
+    if (!validation.success) return validation.response;
+    const { briefId, model } = validation.data;
 
     // Verify access
     const { data: brief } = await supabase

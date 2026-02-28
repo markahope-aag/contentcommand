@@ -1,6 +1,7 @@
 import { LLMrefs } from "llmrefs";
 import { getCached, setCache, getRateLimiter } from "./redis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { serverEnv } from "@/lib/env";
 import { RateLimitError } from "./base";
 import type { ApiRequestLogInsert } from "@/types/database";
 
@@ -14,9 +15,7 @@ const CACHE_TTLS = {
 };
 
 function getClient(): LLMrefs {
-  const apiKey = process.env.LLMREFS_API_KEY;
-  if (!apiKey) throw new Error("Missing LLMREFS_API_KEY");
-  return new LLMrefs({ apiKey });
+  return new LLMrefs({ apiKey: serverEnv().LLMREFS_API_KEY });
 }
 
 async function executeWithTracking<T>(

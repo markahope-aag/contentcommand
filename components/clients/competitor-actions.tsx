@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { sanitizeString, sanitizeDomain } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,12 +29,16 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
     e.preventDefault();
     setLoading(true);
 
+    const cleanName = sanitizeString(name);
+    const cleanDomain = sanitizeDomain(domain);
+    const strengthNum = Math.min(10, Math.max(1, parseInt(strength) || 5));
+
     const supabase = createClient();
     const { error } = await supabase.from("competitors").insert({
       client_id: clientId,
-      name,
-      domain,
-      competitive_strength: parseInt(strength),
+      name: cleanName,
+      domain: cleanDomain,
+      competitive_strength: strengthNum,
     });
 
     if (!error) {
@@ -67,6 +72,7 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Competitor name"
               required
+              maxLength={200}
             />
           </div>
           <div className="space-y-2">
@@ -77,6 +83,7 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
               onChange={(e) => setDomain(e.target.value)}
               placeholder="competitor.com"
               required
+              maxLength={200}
             />
           </div>
           <div className="space-y-2">

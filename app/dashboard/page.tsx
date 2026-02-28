@@ -1,13 +1,32 @@
-import { getClients } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PipelineStatus } from "@/components/content/pipeline-status";
+import {
+  getContentPipelineStats,
+  getContentQueue,
+  getAiUsageSummary,
+} from "@/lib/supabase/queries";
 
 export default async function DashboardPage() {
-  let clients: Awaited<ReturnType<typeof getClients>> = [];
-  try {
-    clients = await getClients();
-  } catch {
-    // User may have no clients yet
-  }
+  const supabase = await createClient();
+
+  const [clientsRes, briefsRes, contentRes, citationsRes, pipelineStats, recentContent, aiUsage] =
+    await Promise.all([
+      supabase.from("clients").select("id", { count: "exact", head: true }),
+      supabase.from("content_briefs").select("id", { count: "exact", head: true }),
+      supabase.from("generated_content").select("id", { count: "exact", head: true }),
+      supabase.from("ai_citations").select("id", { count: "exact", head: true }),
+      getContentPipelineStats(),
+      getContentQueue(),
+      getAiUsageSummary(),
+    ]);
+
+  const clientCount = clientsRes.count ?? 0;
+  const briefCount = briefsRes.count ?? 0;
+  const contentCount = contentRes.count ?? 0;
+  const citationCount = citationsRes.count ?? 0;
+  const recent5 = recentContent.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -21,7 +40,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clients.length}</div>
+            <div className="text-2xl font-bold">{clientCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -31,8 +50,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <div className="text-2xl font-bold">{briefCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -42,8 +60,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <div className="text-2xl font-bold">{contentCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -53,11 +70,57 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <div className="text-2xl font-bold">{citationCount}</div>
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PipelineStatus stats={pipelineStats} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">AI Spend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">${aiUsage.totalCost.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {((aiUsage.totalInputTokens + aiUsage.totalOutputTokens) / 1000).toFixed(1)}k tokens used
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recent Content</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recent5.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No content generated yet. Create a brief to get started.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recent5.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
+                      {item.title ?? item.content_briefs?.title ?? "Untitled"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Badge variant="outline">{item.status}</Badge>
+                    {item.quality_score != null && (
+                      <span className="text-sm font-medium">{item.quality_score}/100</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

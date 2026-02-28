@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getClient, getCompetitors } from "@/lib/supabase/queries";
+import { getClient, getCompetitors, getAllContentBriefs, getContentQueue } from "@/lib/supabase/queries";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,10 +33,19 @@ export default async function ClientDetailPage({
   }
 
   let competitors: Awaited<ReturnType<typeof getCompetitors>> = [];
+  let briefCount = 0;
+  let contentCount = 0;
   try {
-    competitors = await getCompetitors(id);
+    const [comps, briefs, content] = await Promise.all([
+      getCompetitors(id),
+      getAllContentBriefs({ clientId: id }),
+      getContentQueue({ clientId: id }),
+    ]);
+    competitors = comps;
+    briefCount = briefs.length;
+    contentCount = content.length;
   } catch {
-    // No competitors yet
+    // Data may not be available yet
   }
 
   const keywords = Array.isArray(client.target_keywords)
@@ -99,13 +108,13 @@ export default async function ClientDetailPage({
               <span className="text-sm text-muted-foreground">
                 Content Briefs
               </span>
-              <span className="font-medium">0</span>
+              <span className="font-medium">{briefCount}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">
                 Generated Content
               </span>
-              <span className="font-medium">0</span>
+              <span className="font-medium">{contentCount}</span>
             </div>
           </CardContent>
         </Card>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dataForSEO } from "@/lib/integrations/dataforseo";
 import { RateLimitError } from "@/lib/integrations/base";
+import { dataforseoSchema, validateBody } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,48 +13,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, domain, competitorDomain, type = "keywords" } = body;
-
-    if (!clientId || !domain) {
-      return NextResponse.json(
-        { error: "clientId and domain are required" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(dataforseoSchema, body);
+    if (!validation.success) return validation.response;
+    const data = validation.data;
 
     // Verify user has access to this client
     const { data: access } = await supabase
-      .rpc("user_has_client_access", { check_client_id: clientId });
+      .rpc("user_has_client_access", { check_client_id: data.clientId });
     if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     let result;
-    switch (type) {
+    switch (data.type) {
       case "keywords":
-        if (!competitorDomain) {
-          return NextResponse.json(
-            { error: "competitorDomain is required for keyword analysis" },
-            { status: 400 }
-          );
-        }
-        result = await dataForSEO.getCompetitorKeywords(domain, competitorDomain, clientId);
+        result = await dataForSEO.getCompetitorKeywords(data.domain, data.competitorDomain, data.clientId);
         break;
       case "domain_metrics":
-        result = await dataForSEO.getDomainMetrics(domain, clientId);
+        result = await dataForSEO.getDomainMetrics(data.domain, data.clientId);
         break;
       case "serp":
-        const { keyword } = body;
-        if (!keyword) {
-          return NextResponse.json(
-            { error: "keyword is required for SERP analysis" },
-            { status: 400 }
-          );
-        }
-        result = await dataForSEO.getSerpResults(keyword, clientId);
+        result = await dataForSEO.getSerpResults(data.keyword, data.clientId);
         break;
-      default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
     return NextResponse.json({ data: result });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { submitReview } from "@/lib/content/workflow";
+import { contentReviewSchema, validateBody } from "@/lib/validations";
 
 export async function PUT(
   request: Request,
@@ -15,14 +16,9 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { action, reviewerNotes, revisionRequests, reviewTimeMinutes } = body;
-
-    if (!action || !["approve", "revision"].includes(action)) {
-      return NextResponse.json(
-        { error: "action must be 'approve' or 'revision'" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(contentReviewSchema, body);
+    if (!validation.success) return validation.response;
+    const { action, reviewerNotes, revisionRequests, reviewTimeMinutes } = validation.data;
 
     // Verify access
     const { data: content } = await supabase

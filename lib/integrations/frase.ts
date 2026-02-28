@@ -1,4 +1,5 @@
 import { BaseAPIIntegration, APIError } from "./base";
+import { serverEnv } from "@/lib/env";
 
 const BASE_URL = "https://api.frase.io/v1";
 
@@ -11,9 +12,7 @@ export class FraseClient extends BaseAPIIntegration {
   readonly provider = "frase";
 
   private getAuthHeader(): string {
-    const apiKey = process.env.FRASE_API_KEY;
-    if (!apiKey) throw new Error("Missing FRASE_API_KEY");
-    return `Bearer ${apiKey}`;
+    return `Bearer ${serverEnv().FRASE_API_KEY}`;
   }
 
   protected async makeRequest<T>(

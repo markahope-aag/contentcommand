@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { getRateLimiter } from "@/lib/integrations/redis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { serverEnv } from "@/lib/env";
 import { RateLimitError } from "@/lib/integrations/base";
 import type { AiUsageTrackingInsert } from "@/types/database";
 
@@ -26,9 +27,7 @@ interface GenerateResult {
 }
 
 function getClient(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
-  return new OpenAI({ apiKey });
+  return new OpenAI({ apiKey: serverEnv().OPENAI_API_KEY });
 }
 
 export async function generateWithOpenAI(options: GenerateOptions): Promise<GenerateResult> {

@@ -5,6 +5,7 @@ import { dataForSEO } from "@/lib/integrations/dataforseo";
 import { frase } from "@/lib/integrations/frase";
 import { getKeywords as getLlmrefsKeywords } from "@/lib/integrations/llmrefs";
 import { RateLimitError } from "@/lib/integrations/base";
+import { syncSchema, validateBody } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,17 +16,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, provider } = body;
-
-    if (!clientId || !provider) {
-      return NextResponse.json(
-        { error: "clientId and provider are required" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(syncSchema, body);
+    if (!validation.success) return validation.response;
+    const data = validation.data;
 
     const { data: access } = await supabase
-      .rpc("user_has_client_access", { check_client_id: clientId });
+      .rpc("user_has_client_access", { check_client_id: data.clientId });
     if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -35,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { data: client } = await admin
       .from("clients")
       .select("*")
-      .eq("id", clientId)
+      .eq("id", data.clientId)
       .single();
 
     if (!client) {
@@ -45,16 +41,16 @@ export async function POST(request: NextRequest) {
     const { data: competitors } = await admin
       .from("competitors")
       .select("*")
-      .eq("client_id", clientId);
+      .eq("client_id", data.clientId);
 
     const results: Record<string, unknown> = {};
 
-    switch (provider) {
+    switch (data.provider) {
       case "dataforseo":
         // Run domain metrics for client
         results.domainMetrics = await dataForSEO.getDomainMetrics(
           client.domain,
-          clientId
+          data.clientId
         );
         // Run keyword analysis for each competitor
         if (competitors?.length) {
@@ -63,7 +59,7 @@ export async function POST(request: NextRequest) {
             const keywords = await dataForSEO.getCompetitorKeywords(
               client.domain,
               comp.domain,
-              clientId
+              data.clientId
             );
             (results.competitorKeywords as unknown[]).push({
               competitor: comp.domain,
@@ -78,28 +74,15 @@ export async function POST(request: NextRequest) {
         if (targetKeywords.length) {
           results.serpAnalysis = [];
           for (const kw of targetKeywords.slice(0, 5)) {
-            const analysis = await frase.analyzeSerp(kw, clientId);
+            const analysis = await frase.analyzeSerp(kw, data.clientId);
             (results.serpAnalysis as unknown[]).push({ keyword: kw, data: analysis });
           }
         }
         break;
 
       case "llmrefs":
-        const { organizationId, projectId } = body;
-        if (!organizationId || !projectId) {
-          return NextResponse.json(
-            { error: "organizationId and projectId are required for LLMrefs sync" },
-            { status: 400 }
-          );
-        }
-        results.keywords = await getLlmrefsKeywords(organizationId, projectId, clientId);
+        results.keywords = await getLlmrefsKeywords(data.organizationId, data.projectId, data.clientId);
         break;
-
-      default:
-        return NextResponse.json(
-          { error: "Invalid provider" },
-          { status: 400 }
-        );
     }
 
     return NextResponse.json({ data: results });

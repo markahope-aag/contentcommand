@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { frase } from "@/lib/integrations/frase";
 import { RateLimitError } from "@/lib/integrations/base";
+import { fraseSchema, validateBody } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,55 +13,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { clientId, type = "serp" } = body;
-
-    if (!clientId) {
-      return NextResponse.json(
-        { error: "clientId is required" },
-        { status: 400 }
-      );
-    }
+    const validation = validateBody(fraseSchema, body);
+    if (!validation.success) return validation.response;
+    const data = validation.data;
 
     const { data: access } = await supabase
-      .rpc("user_has_client_access", { check_client_id: clientId });
+      .rpc("user_has_client_access", { check_client_id: data.clientId });
     if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     let result;
-    switch (type) {
+    switch (data.type) {
       case "serp":
-        const { query } = body;
-        if (!query) {
-          return NextResponse.json(
-            { error: "query is required for SERP analysis" },
-            { status: 400 }
-          );
-        }
-        result = await frase.analyzeSerp(query, clientId);
+        result = await frase.analyzeSerp(data.query, data.clientId);
         break;
       case "url":
-        const { url } = body;
-        if (!url) {
-          return NextResponse.json(
-            { error: "url is required for URL analysis" },
-            { status: 400 }
-          );
-        }
-        result = await frase.analyzeUrl(url, clientId);
+        result = await frase.analyzeUrl(data.url, data.clientId);
         break;
       case "semantic":
-        const { keyword } = body;
-        if (!keyword) {
-          return NextResponse.json(
-            { error: "keyword is required for semantic analysis" },
-            { status: 400 }
-          );
-        }
-        result = await frase.getSemanticKeywords(keyword, clientId);
+        result = await frase.getSemanticKeywords(data.keyword, data.clientId);
         break;
-      default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
     return NextResponse.json({ data: result });

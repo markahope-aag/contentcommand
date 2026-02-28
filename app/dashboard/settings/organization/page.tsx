@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { sanitizeString, sanitizeSlug } from "@/lib/sanitize";
 import type { Organization, OrganizationMember } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,17 +70,26 @@ export default function OrganizationSettingsPage() {
     setError(null);
     setSuccess(null);
 
+    const cleanName = sanitizeString(name);
+    const cleanSlug = sanitizeSlug(slug);
+
+    if (!cleanName || !cleanSlug) {
+      setError("Name and slug are required.");
+      setSaving(false);
+      return;
+    }
+
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from("organizations")
-      .update({ name, slug })
+      .update({ name: cleanName, slug: cleanSlug })
       .eq("id", org.id);
 
     if (updateError) {
       setError(updateError.message);
     } else {
       setSuccess("Organization updated successfully.");
-      setOrg({ ...org, name, slug });
+      setOrg({ ...org, name: cleanName, slug: cleanSlug });
     }
     setSaving(false);
   }
@@ -89,10 +99,19 @@ export default function OrganizationSettingsPage() {
     setCreating(true);
     setError(null);
 
+    const cleanName = sanitizeString(newOrgName);
+    const cleanSlug = sanitizeSlug(newOrgSlug);
+
+    if (!cleanName || !cleanSlug) {
+      setError("Name and slug are required.");
+      setCreating(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data, error: createError } = await supabase.rpc("create_org_with_owner", {
-      org_name: newOrgName,
-      org_slug: newOrgSlug,
+      org_name: cleanName,
+      org_slug: cleanSlug,
     });
 
     if (createError) {
@@ -140,6 +159,7 @@ export default function OrganizationSettingsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    maxLength={100}
                   />
                 </div>
                 <div className="space-y-2">
@@ -149,6 +169,7 @@ export default function OrganizationSettingsPage() {
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     required
+                    maxLength={100}
                   />
                 </div>
                 <Button type="submit" disabled={saving}>
@@ -209,6 +230,7 @@ export default function OrganizationSettingsPage() {
                   onChange={(e) => setNewOrgName(e.target.value)}
                   placeholder="My Agency"
                   required
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">
@@ -219,6 +241,7 @@ export default function OrganizationSettingsPage() {
                   onChange={(e) => setNewOrgSlug(e.target.value)}
                   placeholder="my-agency"
                   required
+                  maxLength={100}
                 />
                 <p className="text-xs text-muted-foreground">
                   URL-friendly identifier. Use lowercase letters, numbers, and hyphens.

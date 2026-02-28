@@ -9,6 +9,7 @@ import {
   getLocations,
 } from "@/lib/integrations/llmrefs";
 import { RateLimitError } from "@/lib/integrations/base";
+import { llmrefsSchema, validateBody } from "@/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,72 +20,45 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, organizationId, projectId, keywordId, clientId, searchEngines } = body;
+    const validation = validateBody(llmrefsSchema, body);
+    if (!validation.success) return validation.response;
+    const data = validation.data;
 
     // Verify client access if clientId provided
-    if (clientId) {
+    if (data.clientId) {
       const { data: access } = await supabase
-        .rpc("user_has_client_access", { check_client_id: clientId });
+        .rpc("user_has_client_access", { check_client_id: data.clientId });
       if (!access) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 
     let result;
-    switch (type) {
+    switch (data.type) {
       case "organizations":
         result = await getOrganizations();
         break;
-
       case "projects":
-        if (!organizationId) {
-          return NextResponse.json(
-            { error: "organizationId is required" },
-            { status: 400 }
-          );
-        }
-        result = await getProjects(organizationId);
+        result = await getProjects(data.organizationId);
         break;
-
       case "keywords":
-        if (!organizationId || !projectId) {
-          return NextResponse.json(
-            { error: "organizationId and projectId are required" },
-            { status: 400 }
-          );
-        }
-        result = await getKeywords(organizationId, projectId, clientId);
+        result = await getKeywords(data.organizationId, data.projectId, data.clientId);
         break;
-
       case "keyword_detail":
-        if (!organizationId || !projectId || !keywordId) {
-          return NextResponse.json(
-            { error: "organizationId, projectId, and keywordId are required" },
-            { status: 400 }
-          );
-        }
         result = await getKeywordDetail(
-          organizationId,
-          projectId,
-          keywordId,
-          clientId,
-          searchEngines
+          data.organizationId,
+          data.projectId,
+          data.keywordId,
+          data.clientId,
+          data.searchEngines
         );
         break;
-
       case "search_engines":
         result = await getSearchEngines();
         break;
-
       case "locations":
         result = await getLocations();
         break;
-
-      default:
-        return NextResponse.json(
-          { error: "Invalid type. Use: organizations, projects, keywords, keyword_detail, search_engines, locations" },
-          { status: 400 }
-        );
     }
 
     return NextResponse.json({ data: result });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { briefUpdateSchema, validateBody } from "@/lib/validations";
 
 export async function GET(
   _request: Request,
@@ -44,10 +45,12 @@ export async function PUT(
     }
 
     const body = await request.json();
+    const validation = validateBody(briefUpdateSchema, body);
+    if (!validation.success) return validation.response;
 
     const { data: brief, error } = await supabase
       .from("content_briefs")
-      .update(body)
+      .update(validation.data)
       .eq("id", id)
       .select()
       .single();
