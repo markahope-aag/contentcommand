@@ -67,11 +67,20 @@ function ScoreButton({ contentId }: { contentId: string }) {
     <form
       action={async () => {
         "use server";
-        const { scoreContent } = await import("@/lib/ai/content-engine");
-        await scoreContent(contentId);
-
         const { redirect } = await import("next/navigation");
-        redirect(`/dashboard/content/generation/${contentId}`);
+        const { isRedirectError } = await import("next/dist/client/components/redirect");
+
+        try {
+          const { scoreContent } = await import("@/lib/ai/content-engine");
+          await scoreContent(contentId);
+
+          redirect(`/dashboard/content/generation/${contentId}`);
+        } catch (error) {
+          if (isRedirectError(error)) throw error;
+          throw new Error(
+            `Failed to score content: ${error instanceof Error ? error.message : "Unknown error"}`
+          );
+        }
       }}
     >
       <Button type="submit" variant="outline">

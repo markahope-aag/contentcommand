@@ -32,21 +32,13 @@ export default async function ClientDetailPage({
     notFound();
   }
 
-  let competitors: Awaited<ReturnType<typeof getCompetitors>> = [];
-  let briefCount = 0;
-  let contentCount = 0;
-  try {
-    const [comps, briefs, content] = await Promise.all([
-      getCompetitors(id),
-      getAllContentBriefs({ clientId: id }),
-      getContentQueue({ clientId: id }),
-    ]);
-    competitors = comps;
-    briefCount = briefs.length;
-    contentCount = content.length;
-  } catch {
-    // Data may not be available yet
-  }
+  const [competitors, briefs, content] = await Promise.all([
+    getCompetitors(id),
+    getAllContentBriefs({ clientId: id }),
+    getContentQueue({ clientId: id }),
+  ]);
+  const briefCount = briefs.length;
+  const contentCount = content.length;
 
   const keywords = Array.isArray(client.target_keywords)
     ? client.target_keywords

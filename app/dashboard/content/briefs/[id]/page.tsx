@@ -206,21 +206,30 @@ function BriefActionButton({
     <form
       action={async () => {
         "use server";
-        if (action === "approve") {
-          const { createClient } = await import("@/lib/supabase/server");
-          const supabase = await createClient();
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          const { approveBrief } = await import("@/lib/content/workflow");
-          await approveBrief(briefId, user.id);
-        } else {
-          const { generateContent } = await import("@/lib/ai/content-engine");
-          await generateContent({ briefId });
-        }
-
         const { redirect } = await import("next/navigation");
-        redirect(`/dashboard/content/briefs/${briefId}`);
+        const { isRedirectError } = await import("next/dist/client/components/redirect");
+
+        try {
+          if (action === "approve") {
+            const { createClient } = await import("@/lib/supabase/server");
+            const supabase = await createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            const { approveBrief } = await import("@/lib/content/workflow");
+            await approveBrief(briefId, user.id);
+          } else {
+            const { generateContent } = await import("@/lib/ai/content-engine");
+            await generateContent({ briefId });
+          }
+
+          redirect(`/dashboard/content/briefs/${briefId}`);
+        } catch (error) {
+          if (isRedirectError(error)) throw error;
+          throw new Error(
+            `Failed to ${action === "approve" ? "approve brief" : "generate content"}: ${error instanceof Error ? error.message : "Unknown error"}`
+          );
+        }
       }}
     >
       <Button type="submit">{label}</Button>

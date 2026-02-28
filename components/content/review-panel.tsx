@@ -16,9 +16,11 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
   const [notes, setNotes] = useState("");
   const [revisions, setRevisions] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/content/${contentId}/review`, {
         method: "PUT",
@@ -33,13 +35,15 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Review submission failed");
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Review submission failed");
       }
 
       onReviewSubmitted?.();
-    } catch (error) {
-      console.error("Review error:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Review submission failed";
+      setError(message);
+      console.error("Review error:", err);
     } finally {
       setLoading(false);
     }
@@ -92,6 +96,9 @@ export function ReviewPanel({ contentId, onReviewSubmitted }: ReviewPanelProps) 
           </div>
         )}
 
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
         <Button onClick={handleSubmit} disabled={loading} className="w-full">
           {loading
             ? "Submitting..."

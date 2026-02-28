@@ -11,12 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default async function ClientsPage() {
-  let clients: Awaited<ReturnType<typeof getClients>> = [];
-  try {
-    clients = await getClients();
-  } catch {
-    // User may have no clients yet
-  }
+  const clients = await getClients();
 
   return (
     <div className="space-y-6">

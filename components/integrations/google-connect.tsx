@@ -22,22 +22,34 @@ export function GoogleConnect({
 }: GoogleConnectProps) {
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleConnect = async () => {
     if (!selectedClient) return;
     setConnecting(true);
+    setError(null);
 
     try {
       const response = await fetch(
         `/api/integrations/google/auth?clientId=${selectedClient}`
       );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || `Request failed (${response.status})`);
+      }
+
       const data = await response.json();
 
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error("No authorization URL returned");
       }
-    } catch (error) {
-      console.error("Failed to initiate Google OAuth:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to connect Google";
+      setError(message);
+      console.error("Failed to initiate Google OAuth:", err);
     } finally {
       setConnecting(false);
     }
@@ -60,6 +72,9 @@ export function GoogleConnect({
           </SelectContent>
         </Select>
       </div>
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
       <Button
         size="sm"
         onClick={handleConnect}

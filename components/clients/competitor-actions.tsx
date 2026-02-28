@@ -23,25 +23,29 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
   const [domain, setDomain] = useState("");
   const [strength, setStrength] = useState("5");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     const cleanName = sanitizeString(name);
     const cleanDomain = sanitizeDomain(domain);
     const strengthNum = Math.min(10, Math.max(1, parseInt(strength) || 5));
 
     const supabase = createClient();
-    const { error } = await supabase.from("competitors").insert({
+    const { error: dbError } = await supabase.from("competitors").insert({
       client_id: clientId,
       name: cleanName,
       domain: cleanDomain,
       competitive_strength: strengthNum,
     });
 
-    if (!error) {
+    if (dbError) {
+      setError(dbError.message);
+    } else {
       setOpen(false);
       setName("");
       setDomain("");
@@ -97,6 +101,9 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
               onChange={(e) => setStrength(e.target.value)}
             />
           </div>
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={loading}>
               {loading ? "Adding..." : "Add Competitor"}

@@ -45,14 +45,15 @@ export function IntegrationsClient({
   connectedGoogleClientIds,
 }: IntegrationsClientProps) {
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const handleSync = async (provider: string) => {
     if (!clients.length) return;
 
     setSyncingProvider(provider);
+    setSyncError(null);
     try {
-      // Sync for the first client as a default action
-      await fetch("/api/integrations/sync", {
+      const response = await fetch("/api/integrations/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -60,7 +61,14 @@ export function IntegrationsClient({
           provider,
         }),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || `Sync failed (${response.status})`);
+      }
     } catch (error) {
+      const message = error instanceof Error ? error.message : `Sync failed for ${provider}`;
+      setSyncError(message);
       console.error(`Sync failed for ${provider}:`, error);
     } finally {
       setSyncingProvider(null);
@@ -72,6 +80,9 @@ export function IntegrationsClient({
 
   return (
     <div className="space-y-8">
+      {syncError && (
+        <p className="text-sm text-destructive">{syncError}</p>
+      )}
       <div className="space-y-2">
         <h2 className="text-lg font-medium">Providers</h2>
         <div className="grid gap-4 md:grid-cols-2">
