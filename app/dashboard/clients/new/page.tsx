@@ -35,12 +35,18 @@ export default function NewClientPage() {
       .map((k) => k.trim())
       .filter(Boolean);
 
+    // Get current org from localStorage
+    const orgId = typeof window !== "undefined"
+      ? localStorage.getItem("currentOrgId")
+      : null;
+
     const { error } = await supabase.rpc("create_client_with_owner", {
       client_name: name,
       client_domain: domain,
       client_industry: industry || null,
       client_target_keywords: keywordsArray.length > 0 ? keywordsArray : null,
       client_brand_voice: null,
+      p_org_id: orgId,
     });
 
     if (error) {

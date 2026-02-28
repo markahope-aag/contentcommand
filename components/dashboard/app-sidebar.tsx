@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/auth/actions";
+import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊" },
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Content", href: "/dashboard/content", icon: "📝" },
   { name: "Analytics", href: "/dashboard/analytics", icon: "📈" },
   { name: "Integrations", href: "/dashboard/integrations", icon: "🔌" },
+  { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
 ];
 
 export function AppSidebar() {
@@ -30,10 +32,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      <SidebarHeader className="border-b px-4 py-4 space-y-3">
+        <Link href="/dashboard" className="flex items-center gap-2 px-2">
           <span className="text-lg font-bold">Content Command</span>
         </Link>
+        <OrgSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

@@ -17,7 +17,100 @@ import type {
   ApiRequestLog,
   CompetitiveAnalysis,
   AiCitation,
+  Organization,
+  OrganizationMember,
 } from "@/types/database";
+
+// ── Organizations ───────────────────────────────────────────
+
+export async function getOrganizations(): Promise<Organization[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getOrganization(id: string): Promise<Organization | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createOrganization(name: string, slug: string): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_org_with_owner", {
+    org_name: name,
+    org_slug: slug,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrganization(
+  id: string,
+  updates: { name?: string; slug?: string }
+): Promise<Organization> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getOrganizationMembers(orgId: string): Promise<OrganizationMember[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("*")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function addOrganizationMember(
+  orgId: string,
+  userId: string,
+  role: "owner" | "admin" | "member" = "member"
+): Promise<OrganizationMember> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .insert({ org_id: orgId, user_id: userId, role })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function removeOrganizationMember(orgId: string, userId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organization_members")
+    .delete()
+    .eq("org_id", orgId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
 
 // ── Clients ──────────────────────────────────────────────
 
@@ -45,7 +138,8 @@ export async function getClient(id: string): Promise<Client | null> {
 }
 
 export async function createClientWithOwner(
-  client: ClientInsert
+  client: ClientInsert,
+  orgId?: string
 ): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_client_with_owner", {
@@ -54,6 +148,7 @@ export async function createClientWithOwner(
     client_industry: client.industry,
     client_target_keywords: client.target_keywords,
     client_brand_voice: client.brand_voice,
+    p_org_id: orgId || null,
   });
 
   if (error) throw error;

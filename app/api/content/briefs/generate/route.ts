@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     // Permission check
     const { data: access } = await supabase.rpc("user_has_client_access", {
-      p_client_id: clientId,
+      check_client_id: clientId,
     });
     if (!access) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });

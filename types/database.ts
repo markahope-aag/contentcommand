@@ -1,3 +1,23 @@
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  org_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
+  created_at: string;
+}
+
+export type OrganizationInsert = Omit<Organization, "id" | "created_at">;
+export type OrganizationUpdate = Partial<OrganizationInsert>;
+
+export type OrganizationMemberInsert = Omit<OrganizationMember, "id" | "created_at">;
+
 export interface Client {
   id: string;
   name: string;
@@ -5,6 +25,7 @@ export interface Client {
   industry: string | null;
   target_keywords: string[] | null;
   brand_voice: Record<string, unknown> | null;
+  org_id: string | null;
   created_at: string;
 }
 
@@ -109,7 +130,7 @@ export interface UserClient {
   created_at: string;
 }
 
-export type ClientInsert = Omit<Client, "id" | "created_at">;
+export type ClientInsert = Omit<Client, "id" | "created_at" | "org_id"> & { org_id?: string };
 export type ClientUpdate = Partial<ClientInsert>;
 
 export type CompetitorInsert = Omit<Competitor, "id" | "created_at">;

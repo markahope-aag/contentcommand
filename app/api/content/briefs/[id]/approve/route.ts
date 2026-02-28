@@ -26,7 +26,7 @@ export async function PUT(
     }
 
     const { data: access } = await supabase.rpc("user_has_client_access", {
-      p_client_id: brief.client_id,
+      check_client_id: brief.client_id,
     });
     if (!access) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
