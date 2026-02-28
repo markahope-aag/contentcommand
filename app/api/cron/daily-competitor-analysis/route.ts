@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Get all clients with their competitors
+    // Get all clients
     const { data: clients, error: clientsError } = await admin
       .from("clients")
       .select("id, domain, name");
@@ -22,16 +22,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "No clients to process" });
     }
 
+    // Batch fetch all competitors in one query instead of per-client
+    const clientIds = clients.map((c) => c.id);
+    const { data: allCompetitors } = await admin
+      .from("competitors")
+      .select("id, domain, client_id")
+      .in("client_id", clientIds);
+
+    // Group competitors by client_id
+    const competitorsByClient = new Map<string, { id: string; domain: string }[]>();
+    for (const comp of allCompetitors ?? []) {
+      const existing = competitorsByClient.get(comp.client_id) ?? [];
+      existing.push({ id: comp.id, domain: comp.domain });
+      competitorsByClient.set(comp.client_id, existing);
+    }
+
     const results: { clientId: string; success: boolean; error?: string }[] = [];
 
     for (const client of clients) {
       try {
-        // Get competitors for this client
-        const { data: competitors } = await admin
-          .from("competitors")
-          .select("id, domain")
-          .eq("client_id", client.id);
-
         // Domain metrics for the client
         const domainMetrics = await dataForSEO.getDomainMetrics(
           client.domain,
@@ -48,10 +57,11 @@ export async function POST(request: NextRequest) {
           expires_at: expires.toISOString(),
         });
 
-        // Keyword gap analysis for each competitor
-        if (competitors?.length) {
-          for (const comp of competitors) {
-            try {
+        // Keyword gap analysis for each competitor — in parallel
+        const competitors = competitorsByClient.get(client.id) ?? [];
+        if (competitors.length) {
+          const compResults = await Promise.allSettled(
+            competitors.map(async (comp) => {
               const keywords = await dataForSEO.getCompetitorKeywords(
                 client.domain,
                 comp.domain,
@@ -65,11 +75,12 @@ export async function POST(request: NextRequest) {
                 data: keywords as Record<string, unknown>,
                 expires_at: expires.toISOString(),
               });
-            } catch (compError) {
-              console.error(
-                `Keyword analysis failed for ${comp.domain}:`,
-                compError
-              );
+            })
+          );
+
+          for (const r of compResults) {
+            if (r.status === "rejected") {
+              console.error(`Keyword analysis failed for client ${client.name}:`, r.reason);
             }
           }
         }

@@ -6,7 +6,7 @@ import { getAllContentBriefs } from "@/lib/supabase/queries";
 import { Lightbulb } from "lucide-react";
 
 export default async function BriefsPage() {
-  const briefs = await getAllContentBriefs();
+  const { data: briefs } = await getAllContentBriefs();
 
   return (
     <div className="space-y-6">

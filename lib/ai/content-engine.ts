@@ -19,6 +19,7 @@ interface GenerateBriefOptions {
 interface GenerateContentOptions {
   briefId: string;
   model?: "claude" | "openai";
+  clientId?: string;
 }
 
 function parseJsonResponse<T>(text: string): T {
@@ -112,7 +113,7 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
 }
 
 export async function generateContent(options: GenerateContentOptions): Promise<GeneratedContent> {
-  const { briefId, model = "claude" } = options;
+  const { briefId, model = "claude", clientId } = options;
   const supabase = await createClient();
 
   // Fetch brief
@@ -126,6 +127,9 @@ export async function generateContent(options: GenerateContentOptions): Promise<
   if (brief.status !== "approved") {
     throw new Error("Brief must be approved before generating content");
   }
+
+  // Use provided clientId to avoid duplicate fetch, fall back to brief's client_id
+  const resolvedClientId = clientId ?? brief.client_id;
 
   // Update brief status to generating
   const admin = createAdminClient();
@@ -158,7 +162,7 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     prompt,
     systemPrompt: SYSTEM_PROMPTS.contentGeneration,
     maxTokens: 8192,
-    clientId: brief.client_id,
+    clientId: resolvedClientId,
     operation: "content_generation",
     briefId,
   });
@@ -173,7 +177,7 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     .from("generated_content")
     .insert({
       brief_id: briefId,
-      client_id: brief.client_id,
+      client_id: resolvedClientId,
       content: articleContent,
       title: contentData.title as string || brief.title,
       meta_description: contentData.meta_description as string || null,

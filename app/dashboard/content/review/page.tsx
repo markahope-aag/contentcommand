@@ -14,11 +14,11 @@ import { getContentQueue } from "@/lib/supabase/queries";
 import { CheckCircle } from "lucide-react";
 
 export default async function ReviewPage() {
-  const queue = await getContentQueue({ status: "generated" });
-
-  // Also get items in reviewing status
-  const reviewing = await getContentQueue({ status: "reviewing" });
-  const allItems = [...queue, ...reviewing];
+  const [queueResult, reviewingResult] = await Promise.all([
+    getContentQueue({ status: "generated" }),
+    getContentQueue({ status: "reviewing" }),
+  ]);
+  const allItems = [...queueResult.data, ...reviewingResult.data];
 
   return (
     <div className="space-y-6">

@@ -45,7 +45,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function AnalyticsPage() {
-  const [clients, pipelineStats, aiUsage, briefs, contentQueue, integrationHealth] =
+  const [clientsResult, pipelineStats, aiUsage, briefsResult, contentQueueResult, integrationHealth] =
     await Promise.all([
       getClients(),
       getContentPipelineStats(),
@@ -55,7 +55,11 @@ export default async function AnalyticsPage() {
       getIntegrationHealth(),
     ]);
 
-  const totalBriefs = briefs.length;
+  const clients = clientsResult.data;
+  const briefs = briefsResult.data;
+  const contentQueue = contentQueueResult.data;
+
+  const totalBriefs = briefsResult.count;
   const publishedContent = contentQueue.filter((c) => c.status === "published").length;
 
   const scoredContent = contentQueue.filter((c) => c.quality_score != null);

@@ -17,7 +17,7 @@ export default async function IntegrationsPage() {
     return null;
   }
 
-  const [clients, healthData, connectedGoogleClients] = await Promise.all([
+  const [clientsResult, healthData, connectedGoogleClients] = await Promise.all([
     getClients(),
     getIntegrationHealth(),
     getGoogleOAuthStatus(),
@@ -38,7 +38,7 @@ export default async function IntegrationsPage() {
       </div>
 
       <IntegrationsClient
-        clients={clients}
+        clients={clientsResult.data}
         healthData={healthData}
         connectedGoogleClientIds={connectedGoogleClients}
       />

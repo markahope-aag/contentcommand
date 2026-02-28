@@ -52,33 +52,33 @@ export async function POST(request: NextRequest) {
           client.domain,
           data.clientId
         );
-        // Run keyword analysis for each competitor
+        // Run keyword analysis for all competitors in parallel
         if (competitors?.length) {
-          results.competitorKeywords = [];
-          for (const comp of competitors) {
-            const keywords = await dataForSEO.getCompetitorKeywords(
-              client.domain,
-              comp.domain,
-              data.clientId
-            );
-            (results.competitorKeywords as unknown[]).push({
-              competitor: comp.domain,
-              data: keywords,
-            });
-          }
+          results.competitorKeywords = await Promise.all(
+            competitors.map(async (comp) => {
+              const keywords = await dataForSEO.getCompetitorKeywords(
+                client.domain,
+                comp.domain,
+                data.clientId
+              );
+              return { competitor: comp.domain, data: keywords };
+            })
+          );
         }
         break;
 
-      case "frase":
+      case "frase": {
         const targetKeywords = (client.target_keywords as string[]) || [];
         if (targetKeywords.length) {
-          results.serpAnalysis = [];
-          for (const kw of targetKeywords.slice(0, 5)) {
-            const analysis = await frase.analyzeSerp(kw, data.clientId);
-            (results.serpAnalysis as unknown[]).push({ keyword: kw, data: analysis });
-          }
+          results.serpAnalysis = await Promise.all(
+            targetKeywords.slice(0, 5).map(async (kw) => {
+              const analysis = await frase.analyzeSerp(kw, data.clientId);
+              return { keyword: kw, data: analysis };
+            })
+          );
         }
         break;
+      }
 
       case "llmrefs":
         results.keywords = await getLlmrefsKeywords(data.organizationId, data.projectId, data.clientId);

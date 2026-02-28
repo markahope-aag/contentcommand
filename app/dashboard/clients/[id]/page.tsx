@@ -34,13 +34,14 @@ export default async function ClientDetailPage({
     notFound();
   }
 
-  const [competitors, briefs, content] = await Promise.all([
+  const [competitorsResult, briefsResult, contentResult] = await Promise.all([
     getCompetitors(id),
     getAllContentBriefs({ clientId: id }),
     getContentQueue({ clientId: id }),
   ]);
-  const briefCount = briefs.length;
-  const contentCount = content.length;
+  const competitors = competitorsResult.data;
+  const briefCount = briefsResult.count;
+  const contentCount = contentResult.count;
 
   const keywords = Array.isArray(client.target_keywords)
     ? client.target_keywords

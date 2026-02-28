@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { approveBrief } from "@/lib/content/workflow";
+import { transitionBriefStatus } from "@/lib/content/workflow";
 
 export async function PUT(
   _request: Request,
@@ -17,7 +17,7 @@ export async function PUT(
     // Verify user has access to this brief's client
     const { data: brief } = await supabase
       .from("content_briefs")
-      .select("client_id")
+      .select("client_id, status")
       .eq("id", id)
       .single();
 
@@ -32,7 +32,7 @@ export async function PUT(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    await approveBrief(id, user.id);
+    await transitionBriefStatus(id, "approved", user.id, brief.status);
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";

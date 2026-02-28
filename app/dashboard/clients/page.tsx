@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
 
 export default async function ClientsPage() {
-  const clients = await getClients();
+  const { data: clients } = await getClients();
 
   return (
     <div className="space-y-6">

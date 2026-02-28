@@ -29,21 +29,27 @@ export function canTransition(from: string, to: string): boolean {
 export async function transitionBriefStatus(
   briefId: string,
   newStatus: BriefStatus,
-  userId?: string
+  userId?: string,
+  currentStatus?: string
 ): Promise<void> {
   const admin = createAdminClient();
 
-  const { data: brief, error } = await admin
-    .from("content_briefs")
-    .select("status")
-    .eq("id", briefId)
-    .single();
+  // Skip the extra select when the caller already knows the current status
+  let briefStatus = currentStatus;
+  if (!briefStatus) {
+    const { data: brief, error } = await admin
+      .from("content_briefs")
+      .select("status")
+      .eq("id", briefId)
+      .single();
 
-  if (error || !brief) throw new Error("Brief not found");
+    if (error || !brief) throw new Error("Brief not found");
+    briefStatus = brief.status;
+  }
 
-  if (!canTransition(brief.status, newStatus)) {
+  if (!canTransition(briefStatus, newStatus)) {
     throw new Error(
-      `Invalid transition: ${brief.status} → ${newStatus}`
+      `Invalid transition: ${briefStatus} → ${newStatus}`
     );
   }
 
@@ -93,20 +99,16 @@ export async function submitReview(submission: ReviewSubmission): Promise<void> 
     updates.approved_at = new Date().toISOString();
   }
 
-  const { error } = await admin
+  const { data: content, error } = await admin
     .from("generated_content")
     .update(updates)
-    .eq("id", submission.contentId);
+    .eq("id", submission.contentId)
+    .select("brief_id")
+    .single();
 
   if (error) throw error;
 
   // Also update the brief status
-  const { data: content } = await admin
-    .from("generated_content")
-    .select("brief_id")
-    .eq("id", submission.contentId)
-    .single();
-
   if (content?.brief_id) {
     const briefStatus = submission.action === "approve" ? "published" : "revision_requested";
     await admin

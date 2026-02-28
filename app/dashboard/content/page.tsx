@@ -7,11 +7,12 @@ import { getAllContentBriefs, getContentPipelineStats } from "@/lib/supabase/que
 import { Lightbulb } from "lucide-react";
 
 export default async function ContentPage() {
-  const [stats, recentBriefs] = await Promise.all([
+  const [stats, briefsResult] = await Promise.all([
     getContentPipelineStats(),
     getAllContentBriefs(),
   ]);
 
+  const recentBriefs = briefsResult.data;
   const recent = recentBriefs.slice(0, 5);
 
   return (

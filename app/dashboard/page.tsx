@@ -13,7 +13,7 @@ import {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [clientsRes, briefsRes, contentRes, citationsRes, pipelineStats, recentContent, aiUsage] =
+  const [clientsRes, briefsRes, contentRes, citationsRes, pipelineStats, contentQueueResult, aiUsage] =
     await Promise.all([
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase.from("content_briefs").select("id", { count: "exact", head: true }),
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const briefCount = briefsRes.count ?? 0;
   const contentCount = contentRes.count ?? 0;
   const citationCount = citationsRes.count ?? 0;
-  const recent5 = recentContent.slice(0, 5);
+  const recent5 = contentQueueResult.data.slice(0, 5);
 
   return (
     <div className="space-y-6">

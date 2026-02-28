@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const content = await generateContent({ briefId, model });
+    const content = await generateContent({ briefId, model, clientId: brief.client_id });
     return NextResponse.json({ data: content });
   } catch (error) {
     if (error instanceof RateLimitError) {

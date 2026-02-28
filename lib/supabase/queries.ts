@@ -113,18 +113,39 @@ export async function removeOrganizationMember(orgId: string, userId: string): P
   if (error) throw error;
 }
 
+// ── Pagination helper type ───────────────────────────────
+
+export interface PaginationOptions {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  count: number;
+}
+
 // ── Clients ──────────────────────────────────────────────
 
-export async function getClients(): Promise<Client[]> {
-  return withCache("cc:clients:all", async () => {
+export async function getClients(
+  pagination?: PaginationOptions
+): Promise<PaginatedResult<Client>> {
+  const page = pagination?.page ?? 1;
+  const pageSize = pagination?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const cacheKey = `cc:clients:p${page}:s${pageSize}`;
+  return withCache(cacheKey, async () => {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("clients")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (error) throw error;
-    return data;
+    return { data: data ?? [], count: count ?? 0 };
   }, 300);
 }
 
@@ -185,17 +206,27 @@ export async function deleteClient(id: string): Promise<void> {
 
 // ── Competitors ──────────────────────────────────────────
 
-export async function getCompetitors(clientId: string): Promise<Competitor[]> {
-  return withCache(`cc:competitors:${clientId}`, async () => {
+export async function getCompetitors(
+  clientId: string,
+  pagination?: PaginationOptions
+): Promise<PaginatedResult<Competitor>> {
+  const page = pagination?.page ?? 1;
+  const pageSize = pagination?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const cacheKey = `cc:competitors:${clientId}:p${page}:s${pageSize}`;
+  return withCache(cacheKey, async () => {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("competitors")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("client_id", clientId)
-      .order("competitive_strength", { ascending: false });
+      .order("competitive_strength", { ascending: false })
+      .range(from, to);
 
     if (error) throw error;
-    return data;
+    return { data: data ?? [], count: count ?? 0 };
   }, 300);
 }
 
@@ -256,27 +287,35 @@ export async function getAllContentBriefs(filters?: {
   clientId?: string;
   status?: string;
   priorityLevel?: string;
-}): Promise<ContentBrief[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<PaginatedResult<ContentBrief>> {
+  const page = filters?.page ?? 1;
+  const pageSize = filters?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const hasFilters = filters?.clientId || filters?.status || filters?.priorityLevel;
   const fetcher = async () => {
     const supabase = await createClient();
     let query = supabase
       .from("content_briefs")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (filters?.clientId) query = query.eq("client_id", filters.clientId);
     if (filters?.status) query = query.eq("status", filters.status);
     if (filters?.priorityLevel) query = query.eq("priority_level", filters.priorityLevel);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data;
+    return { data: data ?? [], count: count ?? 0 };
   };
 
   // Only cache the no-filter variant
   if (hasFilters) return fetcher();
-  return withCache("cc:briefs:all", fetcher, 60);
+  return withCache(`cc:briefs:all:p${page}:s${pageSize}`, fetcher, 60);
 }
 
 export async function getContentBriefs(
@@ -371,26 +410,37 @@ export async function getGeneratedContentByClient(clientId: string): Promise<Gen
 export async function getContentQueue(filters?: {
   clientId?: string;
   status?: string;
-}): Promise<(GeneratedContent & { content_briefs: ContentBrief })[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<PaginatedResult<GeneratedContent & { content_briefs: ContentBrief }>> {
+  const page = filters?.page ?? 1;
+  const pageSize = filters?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const hasFilters = filters?.clientId || filters?.status;
   const fetcher = async () => {
     const supabase = await createClient();
     let query = supabase
       .from("generated_content")
-      .select("*, content_briefs(*)")
-      .order("created_at", { ascending: false });
+      .select("*, content_briefs(*)", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (filters?.clientId) query = query.eq("client_id", filters.clientId);
     if (filters?.status) query = query.eq("status", filters.status);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data as (GeneratedContent & { content_briefs: ContentBrief })[];
+    return {
+      data: (data ?? []) as (GeneratedContent & { content_briefs: ContentBrief })[],
+      count: count ?? 0,
+    };
   };
 
   // Only cache the no-filter variant
   if (hasFilters) return fetcher();
-  return withCache("cc:content-queue:all", fetcher, 60);
+  return withCache(`cc:content-queue:all:p${page}:s${pageSize}`, fetcher, 60);
 }
 
 export async function updateGeneratedContent(
@@ -451,37 +501,42 @@ export async function getAiUsageSummary(clientId?: string): Promise<{
   const cacheKey = clientId ? `cc:ai-usage:${clientId}` : "cc:ai-usage:global";
   return withCache(cacheKey, async () => {
     const supabase = await createClient();
-    let query = supabase.from("ai_usage_tracking").select("*");
-    if (clientId) query = query.eq("client_id", clientId);
+    const { data, error } = await supabase.rpc("get_ai_usage_summary", {
+      p_client_id: clientId || null,
+    });
 
-    const { data, error } = await query;
     if (error) throw error;
 
-    const records = data as AiUsageTracking[];
+    const rows = (data || []) as {
+      total_cost: number;
+      total_input_tokens: number;
+      total_output_tokens: number;
+      provider: string;
+      operation: string;
+      group_cost: number;
+      group_calls: number;
+    }[];
+
     const summary = {
-      totalCost: 0,
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
+      totalCost: rows.length > 0 ? Number(rows[0].total_cost) : 0,
+      totalInputTokens: rows.length > 0 ? Number(rows[0].total_input_tokens) : 0,
+      totalOutputTokens: rows.length > 0 ? Number(rows[0].total_output_tokens) : 0,
       byProvider: {} as Record<string, { cost: number; calls: number }>,
       byOperation: {} as Record<string, { cost: number; calls: number }>,
     };
 
-    for (const r of records) {
-      summary.totalCost += Number(r.estimated_cost_usd);
-      summary.totalInputTokens += r.input_tokens;
-      summary.totalOutputTokens += r.output_tokens;
-
+    for (const r of rows) {
       if (!summary.byProvider[r.provider]) {
         summary.byProvider[r.provider] = { cost: 0, calls: 0 };
       }
-      summary.byProvider[r.provider].cost += Number(r.estimated_cost_usd);
-      summary.byProvider[r.provider].calls += 1;
+      summary.byProvider[r.provider].cost += Number(r.group_cost);
+      summary.byProvider[r.provider].calls += Number(r.group_calls);
 
       if (!summary.byOperation[r.operation]) {
         summary.byOperation[r.operation] = { cost: 0, calls: 0 };
       }
-      summary.byOperation[r.operation].cost += Number(r.estimated_cost_usd);
-      summary.byOperation[r.operation].calls += 1;
+      summary.byOperation[r.operation].cost += Number(r.group_cost);
+      summary.byOperation[r.operation].calls += Number(r.group_calls);
     }
 
     return summary;
@@ -496,15 +551,15 @@ export async function getContentPipelineStats(clientId?: string): Promise<
   const cacheKey = clientId ? `cc:pipeline-stats:${clientId}` : "cc:pipeline-stats:global";
   return withCache(cacheKey, async () => {
     const supabase = await createClient();
-    let query = supabase.from("content_briefs").select("status");
-    if (clientId) query = query.eq("client_id", clientId);
+    const { data, error } = await supabase.rpc("get_pipeline_stats", {
+      p_client_id: clientId || null,
+    });
 
-    const { data, error } = await query;
     if (error) throw error;
 
     const stats: Record<string, number> = {};
-    for (const row of data) {
-      stats[row.status] = (stats[row.status] || 0) + 1;
+    for (const row of (data || []) as { status: string; count: number }[]) {
+      stats[row.status] = Number(row.count);
     }
     return stats;
   }, 60);
@@ -529,27 +584,31 @@ export async function getIntegrationHealth(): Promise<IntegrationHealth[]> {
 
 export async function getApiRequestLogs(
   provider?: string,
-  limit = 50
-): Promise<ApiRequestLog[]> {
-  // Only cache default params (no provider filter, default limit)
+  pagination?: PaginationOptions
+): Promise<PaginatedResult<ApiRequestLog>> {
+  const page = pagination?.page ?? 1;
+  const pageSize = pagination?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const fetcher = async () => {
     const supabase = await createClient();
     let query = supabase
       .from("api_request_logs")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range(from, to);
 
     if (provider) {
       query = query.eq("provider", provider);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data;
+    return { data: data ?? [], count: count ?? 0 };
   };
 
-  if (provider || limit !== 50) return fetcher();
+  if (provider || page !== 1 || pageSize !== 50) return fetcher();
   return withCache("cc:api-logs:all", fetcher, 900);
 }
 
