@@ -11,6 +11,13 @@
 
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
