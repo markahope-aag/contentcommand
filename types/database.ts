@@ -28,6 +28,23 @@ export interface ContentBrief {
   status: string;
   content_requirements: Record<string, unknown> | null;
   created_at: string;
+  // Stage 3 fields
+  target_audience: string | null;
+  content_type: string;
+  competitive_gap_analysis: Record<string, unknown> | null;
+  ai_citation_opportunity_data: Record<string, unknown> | null;
+  serp_content_analysis: string | null;
+  authority_signals: string | null;
+  controversial_positions: string | null;
+  target_word_count: number;
+  required_sections: string[] | null;
+  semantic_keywords: string[] | null;
+  internal_links: string[] | null;
+  client_voice_profile: Record<string, unknown> | null;
+  priority_level: string;
+  updated_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
 }
 
 export interface GeneratedContent {
@@ -40,6 +57,29 @@ export interface GeneratedContent {
   word_count: number | null;
   status: string;
   created_at: string;
+  // Stage 3 fields
+  client_id: string | null;
+  title: string | null;
+  meta_description: string | null;
+  excerpt: string | null;
+  ai_model_used: string | null;
+  generation_prompt: string | null;
+  generation_time_seconds: number | null;
+  authority_score: number | null;
+  expertise_score: number | null;
+  readability_score: number | null;
+  optimization_score: number | null;
+  aeo_optimizations: Record<string, unknown> | null;
+  internal_links_added: string[] | null;
+  external_references: string[] | null;
+  predicted_seo_impact: Record<string, unknown> | null;
+  predicted_ai_citations: Record<string, unknown> | null;
+  competitive_advantage_score: number | null;
+  human_review_time_minutes: number | null;
+  reviewer_notes: string | null;
+  revision_requests: string[] | null;
+  reviewed_at: string | null;
+  approved_at: string | null;
 }
 
 export interface PerformanceTracking {
@@ -75,8 +115,44 @@ export type ClientUpdate = Partial<ClientInsert>;
 export type CompetitorInsert = Omit<Competitor, "id" | "created_at">;
 export type CompetitorUpdate = Partial<Omit<CompetitorInsert, "client_id">>;
 
-export type ContentBriefInsert = Omit<ContentBrief, "id" | "created_at">;
+export type ContentBriefInsert = Omit<ContentBrief, "id" | "created_at" | "updated_at">;
 export type ContentBriefUpdate = Partial<Omit<ContentBriefInsert, "client_id">>;
+
+export type GeneratedContentInsert = Omit<GeneratedContent, "id" | "created_at">;
+export type GeneratedContentUpdate = Partial<Omit<GeneratedContentInsert, "brief_id">>;
+
+// ── Stage 3: Content Quality & AI Usage ─────────────────
+
+export interface ContentQualityAnalysis {
+  id: string;
+  content_id: string;
+  overall_score: number | null;
+  seo_score: number | null;
+  readability_score: number | null;
+  authority_score: number | null;
+  engagement_score: number | null;
+  aeo_score: number | null;
+  detailed_feedback: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export type ContentQualityAnalysisInsert = Omit<ContentQualityAnalysis, "id" | "created_at">;
+
+export interface AiUsageTracking {
+  id: string;
+  client_id: string | null;
+  provider: string;
+  model: string;
+  operation: string;
+  input_tokens: number;
+  output_tokens: number;
+  estimated_cost_usd: number;
+  brief_id: string | null;
+  content_id: string | null;
+  created_at: string;
+}
+
+export type AiUsageTrackingInsert = Omit<AiUsageTracking, "id" | "created_at">;
 
 // ── Stage 2: API Integration Layer ──────────────────────
 
