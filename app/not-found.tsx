@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function NotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -7,12 +9,9 @@ export default function NotFound() {
         <p className="text-sm text-muted-foreground">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <a
-          href="/dashboard"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Go to Dashboard
-        </a>
+        <Button asChild>
+          <a href="/dashboard">Go to Dashboard</a>
+        </Button>
       </div>
     </div>
   );

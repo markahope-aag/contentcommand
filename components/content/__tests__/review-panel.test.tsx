@@ -40,13 +40,13 @@ describe('ReviewPanel', () => {
 
   it('defaults to approve action', () => {
     render(<ReviewPanel contentId={contentId} />)
-    
+
     const approveButton = screen.getByText('Approve')
     const revisionButton = screen.getByText('Request Revision')
-    
-    // Approve should be active (default variant)
-    expect(approveButton.closest('button')).not.toHaveClass('variant-outline')
-    expect(revisionButton.closest('button')).toHaveClass('variant-outline')
+
+    // Approve should be the default variant (bg-primary), revision should be outline (border-input)
+    expect(approveButton.closest('button')).toHaveClass('bg-primary')
+    expect(revisionButton.closest('button')).toHaveClass('border-input')
   })
 
   it('switches to revision action when clicked', async () => {

@@ -19,17 +19,23 @@ Welcome to the Content Command documentation. This comprehensive guide covers ev
 
 ### API Documentation
 - [API Overview](./api/overview.md)
+- [OpenAPI Specification](./api/openapi.yaml) - Complete API specification
+- [Swagger UI Guide](./api/swagger-ui.md) - Interactive API documentation
 - [Authentication](./api/authentication.md)
 - [Content Endpoints](./api/content.md)
 - [Client Endpoints](./api/clients.md)
 - [Integration Endpoints](./api/integrations.md)
 - [Analytics Endpoints](./api/analytics.md)
 
+### Deployment Guides
+- [Production Setup](./deployment/production-setup.md) - Complete production deployment
+- [Vercel Deployment](./deployment/vercel.md) - Deploy to Vercel platform
+- [Docker Deployment](./deployment/docker.md) - Containerized deployment
+
 ### Developer Guides
 - [Architecture Overview](./development/architecture.md)
 - [Database Schema](./development/database.md)
 - [Testing Guide](./development/testing.md)
-- [Deployment Guide](./development/deployment.md)
 - [Contributing Guidelines](./development/contributing.md)
 
 ### Integration Guides
@@ -39,7 +45,7 @@ Welcome to the Content Command documentation. This comprehensive guide covers ev
 - [LLMRefs Integration](./integrations/llmrefs.md)
 
 ### Operations
-- [Monitoring & Logging](./operations/monitoring.md)
+- [Monitoring & Observability](./operations/monitoring.md) - Complete monitoring setup
 - [Performance Optimization](./operations/performance.md)
 - [Backup & Recovery](./operations/backup.md)
 - [Security Best Practices](./operations/security.md)
