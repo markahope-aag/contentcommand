@@ -1,3 +1,18 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript", "plugin:jsx-a11y/recommended"]
+  "extends": ["next/core-web-vitals", "next/typescript", "plugin:jsx-a11y/recommended"],
+  "overrides": [
+    {
+      "files": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "@typescript-eslint/no-require-imports": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "jsx-a11y/role-has-required-aria-props": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/interactive-supports-focus": "off",
+        "jsx-a11y/no-redundant-roles": "off",
+        "@next/next/no-img-element": "off"
+      }
+    }
+  ]
 }
