@@ -30,6 +30,58 @@ function parseJsonResponse<T>(text: string): T {
   return JSON.parse(cleaned);
 }
 
+/**
+ * Summarize competitive analysis data to avoid blowing past token limits.
+ * Raw DataForSEO responses can be 200K+ tokens — extract only what's useful for brief generation.
+ */
+function summarizeCompetitiveData(rawData: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rawData.map((data) => {
+    if (!data || typeof data !== "object") return {};
+    // Extract commonly useful fields from DataForSEO responses
+    const summary: Record<string, unknown> = {};
+    for (const key of [
+      "domain", "competitor_domain", "organic_traffic", "keywords_count",
+      "keyword_overlap", "competitive_strength", "top_keywords",
+      "common_keywords", "missing_keywords", "domain_rank",
+    ]) {
+      if (key in data) summary[key] = data[key];
+    }
+    // If top_keywords/common_keywords/missing_keywords are arrays, limit to first 20
+    for (const key of ["top_keywords", "common_keywords", "missing_keywords"]) {
+      if (Array.isArray(summary[key]) && (summary[key] as unknown[]).length > 20) {
+        summary[key] = (summary[key] as unknown[]).slice(0, 20);
+      }
+    }
+    // Fallback: if we extracted nothing useful, return a truncated summary
+    if (Object.keys(summary).length === 0) {
+      const str = JSON.stringify(data);
+      return { raw_summary: str.length > 2000 ? str.substring(0, 2000) + "...(truncated)" : str };
+    }
+    return summary;
+  });
+}
+
+/**
+ * Summarize citation data for prompt context.
+ */
+function summarizeCitationData(rawData: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rawData.map((data) => {
+    if (!data || typeof data !== "object") return {};
+    const summary: Record<string, unknown> = {};
+    for (const key of [
+      "platform", "query", "cited", "citation_url", "position",
+      "share_of_voice", "competitors_cited", "total_citations",
+    ]) {
+      if (key in data) summary[key] = data[key];
+    }
+    if (Object.keys(summary).length === 0) {
+      const str = JSON.stringify(data);
+      return { raw_summary: str.length > 1000 ? str.substring(0, 1000) + "...(truncated)" : str };
+    }
+    return summary;
+  });
+}
+
 export async function generateBrief(options: GenerateBriefOptions): Promise<ContentBrief> {
   const { clientId, targetKeyword, contentType = "blog_post" } = options;
   const supabase = await createClient();
@@ -65,8 +117,8 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     targetKeyword,
     brandVoice: client.brand_voice,
     targetKeywords: client.target_keywords,
-    competitiveData: (competitiveData || []).map((d) => d.data),
-    citationData: (citationData || []).map((d) => d.data || {}),
+    competitiveData: summarizeCompetitiveData((competitiveData || []).map((d) => d.data)),
+    citationData: summarizeCitationData((citationData || []).map((d) => d.data || {})),
     contentType,
   });
 
@@ -77,7 +129,6 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     clientId,
     operation: "brief_generation",
   });
-
   const briefData = parseJsonResponse<Record<string, unknown>>(result.content);
 
   // Insert the brief
