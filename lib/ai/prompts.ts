@@ -83,7 +83,11 @@ ${competitiveSection}
 ${citationSection}
 
 ## Instructions
-Analyze the SERP data, semantic keywords, competitive landscape, and AI citation opportunities to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy. Return your response as a JSON object with exactly these fields:
+Analyze the SERP data, semantic keywords, competitive landscape, and AI citation opportunities to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy.
+
+The final article will be a long-form editorial with flowing paragraphs (not bullet-point heavy), a Key Takeaways box at the top, and an FAQ section at the bottom. Design the required_sections accordingly — each section should be a topic area that will contain 3-5 paragraphs of substantive analysis, not a list heading.
+
+Return your response as a JSON object with exactly these fields:
 
 {
   "title": "Compelling, SEO-optimized title",
@@ -146,23 +150,37 @@ ${input.controversialPositions || "Take well-reasoned positions backed by data"}
 ${input.serpContentAnalysis || "No SERP analysis available"}
 ${brandVoice}
 
-## Instructions
-Write a comprehensive, well-structured article that:
-1. Targets the primary keyword naturally (2-3% density)
-2. Includes semantic keywords throughout
-3. Uses proper heading hierarchy (H2, H3)
-4. Includes an engaging introduction with a hook
-5. Has a clear, actionable conclusion
-6. Is optimized for AI search citation (clear, factual statements)
-7. Demonstrates E-E-A-T signals throughout
-8. Includes data points and specific examples
+## Writing Style & Structure Instructions
+
+Write a long-form, magazine-quality article that reads like a well-crafted editorial — NOT a list of bullet points. Follow this structure:
+
+### Article Structure
+1. **Key Takeaways** — Start with a "Key Takeaways" box (3-5 bullet points summarizing the article's core insights). This is the ONLY section that should be bullet points.
+2. **Introduction** — 2-3 paragraphs with an engaging hook, context-setting, and a clear thesis. Draw the reader in with a story, surprising statistic, or provocative question.
+3. **Body Sections** (H2/H3 headings) — The bulk of the article. Each section should contain:
+   - **Flowing paragraphs** (3-5 sentences each) that explain, analyze, and argue — not bullets
+   - Concrete examples, data points, and real-world scenarios woven into the prose
+   - Smooth transitions between paragraphs and sections
+   - Use bullet points or numbered lists ONLY when listing specific items (tools, steps, features) — never as the primary content format
+4. **FAQ Section** — End with an "## Frequently Asked Questions" section containing 4-6 Q&A pairs formatted as H3 questions with paragraph answers. Base these on real questions people ask about this topic.
+5. **Conclusion** — 1-2 paragraphs summarizing key insights and a clear call-to-action.
+
+### Writing Quality
+- Write in a confident, authoritative voice — like an industry expert explaining to a knowledgeable peer
+- Every paragraph should contain substantive analysis, not just surface-level descriptions
+- Use specific numbers, percentages, timeframes, and named examples (not vague generalities)
+- Vary sentence length — mix short punchy sentences with longer explanatory ones
+- Target the primary keyword naturally (2-3% density) and weave semantic keywords into the prose
+- Demonstrate E-E-A-T: cite sources, reference methodologies, show first-hand expertise
+- Optimize for AI search citation with clear, factual, well-attributed statements
+- The content-to-bullet ratio should be at least 80% prose paragraphs, 20% or less lists
 
 Return your response as a JSON object:
 {
   "title": "Final optimized title",
   "meta_description": "155 character max meta description",
   "excerpt": "2-3 sentence excerpt for previews",
-  "content": "Full article content in markdown format",
+  "content": "Full article content in markdown format. Must be primarily flowing paragraphs with minimal bullet points. Must include Key Takeaways at top and FAQ section at bottom.",
   "internal_links_added": ["links used"],
   "external_references": ["sources referenced"],
   "aeo_optimizations": {
@@ -223,6 +241,6 @@ Return ONLY the JSON object, no markdown fences or explanation.`;
 
 export const SYSTEM_PROMPTS = {
   briefGeneration: "You are a strategic content intelligence analyst. You analyze competitive landscapes and generate data-driven content briefs. Always return valid JSON.",
-  contentGeneration: "You are an expert content writer who creates SEO-optimized, authoritative articles. You write engaging, well-researched content that ranks in both traditional and AI search. Always return valid JSON.",
+  contentGeneration: "You are an expert content writer who creates long-form, magazine-quality articles. You write in flowing, analytical paragraphs — not bullet point lists. Your content reads like a well-crafted editorial with substantive analysis, specific examples, and authoritative voice. Every article must include Key Takeaways at the top and an FAQ section at the bottom. Always return valid JSON.",
   qualityScoring: "You are a content quality analyst who provides objective, consistent scoring of content across multiple dimensions. Always return valid JSON with scores from 0-100.",
 };
