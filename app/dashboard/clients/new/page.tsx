@@ -66,8 +66,8 @@ export default function NewClientPage() {
       setLoading(false);
     } else {
       toast({ title: "Client created", description: `${cleanName} has been added.` });
-      router.push("/dashboard/clients");
-      router.refresh();
+      // Hard navigate to ensure server components refetch
+      window.location.href = "/dashboard/clients";
     }
   }
 

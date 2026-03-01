@@ -115,11 +115,10 @@ export default function OrganizationSettingsPage() {
     if (createError) {
       toast({ title: "Creation failed", description: createError.message, variant: "destructive" });
     } else {
-      toast({ title: "Organization created", description: `${cleanName} is ready to use.` });
       localStorage.setItem("currentOrgId", data);
-      setNewOrgName("");
-      setNewOrgSlug("");
-      loadOrg();
+      // Hard reload so the sidebar org switcher picks up the new org
+      window.location.href = "/dashboard/settings/organization";
+      return;
     }
     setCreating(false);
   }
