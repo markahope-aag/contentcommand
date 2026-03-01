@@ -339,10 +339,11 @@ describe('Database Migrations and Transactions', () => {
     describe('Migration Rollback', () => {
       it('handles failed migration gracefully', async () => {
         // Mock migration failure
+        const insertMock = jest.fn().mockRejectedValue(
+          new Error('Migration failed: constraint violation')
+        )
         mockAdminClient.from.mockReturnValue({
-          insert: jest.fn().mockRejectedValue(
-            new Error('Migration failed: constraint violation')
-          ),
+          insert: insertMock,
         })
 
         await expect(
@@ -351,12 +352,14 @@ describe('Database Migrations and Transactions', () => {
       })
 
       it('maintains data integrity during rollback', async () => {
-        // Mock successful rollback
+        // Mock successful rollback with proper chain for .eq().eq()
         mockAdminClient.from.mockReturnValue({
           select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue(
-              mockQueryResults.success([{ table_name: 'clients' }])
-            ),
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValue(
+                mockQueryResults.success([{ table_name: 'clients' }])
+              ),
+            }),
           }),
         })
 
@@ -405,26 +408,47 @@ describe('Database Migrations and Transactions', () => {
         const contentId = 'content-id'
         const analysisId = 'analysis-id'
 
-        // Mock successful transaction steps
-        transactionTestHelpers.mockSuccessfulTransaction(mockClient, [
-          mockQueryResults.single(testDataFactory.contentBrief({ id: briefId })),
-          mockQueryResults.single(testDataFactory.generatedContent({ 
-            id: contentId, 
-            brief_id: briefId 
-          })),
-          mockQueryResults.single({
-            id: analysisId,
-            content_id: contentId,
-            overall_score: 85,
-            seo_score: 90,
-            readability_score: 80,
-            authority_score: 85,
-            engagement_score: 88,
-            aeo_score: 82,
-            detailed_feedback: null,
-            created_at: '2024-01-01T00:00:00Z',
-          }),
-        ])
+        const briefData = testDataFactory.contentBrief({ id: briefId })
+        const contentData = testDataFactory.generatedContent({
+          id: contentId,
+          brief_id: briefId
+        })
+        const analysisData = {
+          id: analysisId,
+          content_id: contentId,
+          overall_score: 85,
+          seo_score: 90,
+          readability_score: 80,
+          authority_score: 85,
+          engagement_score: 88,
+          aeo_score: 82,
+          detailed_feedback: null,
+          created_at: '2024-01-01T00:00:00Z',
+        }
+
+        // Mock each step with proper chainable methods
+        mockClient.from
+          .mockReturnValueOnce({
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue(mockQueryResults.single(briefData)),
+              }),
+            }),
+          })
+          .mockReturnValueOnce({
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue(mockQueryResults.single(contentData)),
+              }),
+            }),
+          })
+          .mockReturnValueOnce({
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue(mockQueryResults.single(analysisData)),
+              }),
+            }),
+          })
 
         // Step 1: Create brief
         const briefResult = await mockClient
@@ -504,8 +528,23 @@ describe('Database Migrations and Transactions', () => {
       })
 
       it('handles partial transaction failure', async () => {
-        // Mock transaction that fails at step 2
-        transactionTestHelpers.mockFailedTransaction(mockClient, 2)
+        // Step 1 succeeds
+        mockClient.from.mockReturnValueOnce({
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue(mockQueryResults.single({})),
+            }),
+          }),
+        })
+
+        // Step 2 fails
+        mockClient.from.mockReturnValueOnce({
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockRejectedValue(new Error('Transaction failed')),
+            }),
+          }),
+        })
 
         // Step 1: Create brief (succeeds)
         const briefResult = await mockClient
@@ -621,11 +660,12 @@ describe('Database Migrations and Transactions', () => {
 
     describe('Data Consistency', () => {
       it('maintains referential integrity', async () => {
-        // Mock foreign key constraint violation
+        // Mock foreign key constraint violation at the end of the chain
+        const insertMock = jest.fn().mockRejectedValue(
+          new Error('insert or update on table violates foreign key constraint')
+        )
         mockClient.from.mockReturnValue({
-          insert: jest.fn().mockRejectedValue(
-            new Error('insert or update on table violates foreign key constraint')
-          ),
+          insert: insertMock,
         })
 
         await expect(
@@ -642,10 +682,11 @@ describe('Database Migrations and Transactions', () => {
       })
 
       it('enforces unique constraints', async () => {
+        const insertMock = jest.fn().mockRejectedValue(
+          new Error('duplicate key value violates unique constraint')
+        )
         mockClient.from.mockReturnValue({
-          insert: jest.fn().mockRejectedValue(
-            new Error('duplicate key value violates unique constraint')
-          ),
+          insert: insertMock,
         })
 
         await expect(
@@ -657,10 +698,11 @@ describe('Database Migrations and Transactions', () => {
       })
 
       it('validates check constraints', async () => {
+        const insertMock = jest.fn().mockRejectedValue(
+          new Error('new row violates check constraint')
+        )
         mockClient.from.mockReturnValue({
-          insert: jest.fn().mockRejectedValue(
-            new Error('new row violates check constraint')
-          ),
+          insert: insertMock,
         })
 
         await expect(
@@ -677,9 +719,15 @@ describe('Database Migrations and Transactions', () => {
       it('handles deadlock detection and retry', async () => {
         // First attempt fails with deadlock
         mockClient.from.mockReturnValueOnce({
-          update: jest.fn().mockRejectedValue(
-            new Error('deadlock detected')
-          ),
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockRejectedValue(
+                  new Error('deadlock detected')
+                ),
+              }),
+            }),
+          }),
         })
 
         // Retry succeeds

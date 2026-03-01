@@ -1,3 +1,12 @@
+// Mock dependencies to prevent ESM import errors from redis/cache
+jest.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: jest.fn(),
+}))
+jest.mock('@/lib/cache', () => ({
+  invalidateCache: jest.fn(),
+  withCache: jest.fn((key: string, fn: () => Promise<unknown>) => fn()),
+}))
+
 import { BriefWorkflowSimulator, AIUsageTracker, QualityScoreSimulator, testDataFactory } from '@/lib/test-utils/integration-helpers'
 import { canTransition } from '@/lib/content/workflow'
 

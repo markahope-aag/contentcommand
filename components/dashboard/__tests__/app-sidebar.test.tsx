@@ -4,6 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import { axe } from 'jest-axe'
 import { AppSidebar } from '../app-sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
 
@@ -198,6 +199,12 @@ describe('AppSidebar', () => {
     // Settings link should also be present
     const settingsLink = screen.getByText('Settings').closest('a')
     expect(settingsLink).toHaveAttribute('href', '/dashboard/settings')
+  })
+
+  it('has no accessibility violations', async () => {
+    const { container } = renderWithProvider(<AppSidebar />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
   })
 
   it('renders with proper accessibility attributes', () => {

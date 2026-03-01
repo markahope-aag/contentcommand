@@ -4,8 +4,7 @@
  * Tests service-role operations, RLS bypass, and admin-only functions
  */
 
-import { createAdminClient } from '../admin'
-import { 
+import {
   createMockSupabaseClient,
   testDataFactory,
   mockQueryResults,
@@ -28,12 +27,18 @@ jest.mock('@supabase/supabase-js', () => ({
 
 describe('Admin Supabase Client', () => {
   let mockAdminClient: jest.Mocked<any>
+  let createAdminClient: () => any
 
   beforeEach(() => {
-    mockAdminClient = createMockSupabaseClient()
-    const { createClient } = require('@supabase/supabase-js')
-    createClient.mockReturnValue(mockAdminClient)
     jest.clearAllMocks()
+    // Reset modules to clear the singleton cached admin client
+    jest.resetModules()
+    mockAdminClient = createMockSupabaseClient()
+    const supabaseJs = require('@supabase/supabase-js')
+    supabaseJs.createClient.mockReturnValue(mockAdminClient)
+    // Re-require admin module to get a fresh singleton
+    const adminModule = require('../admin')
+    createAdminClient = adminModule.createAdminClient
   })
 
   describe('Client Creation', () => {
