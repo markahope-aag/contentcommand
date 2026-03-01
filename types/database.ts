@@ -246,3 +246,43 @@ export interface GoogleOAuthToken {
 
 export type GoogleOAuthTokenInsert = Omit<GoogleOAuthToken, "id" | "created_at" | "updated_at">;
 export type GoogleOAuthTokenUpdate = Partial<Omit<GoogleOAuthTokenInsert, "client_id">>;
+
+// ── Stage 4: Competitive Intelligence ───────────────────
+
+export interface CompetitiveMetricsHistory {
+  id: string;
+  client_id: string;
+  competitor_id: string | null;
+  metric_type: string;
+  metric_value: number;
+  recorded_at: string;
+}
+
+export type CompetitiveMetricsHistoryInsert = Omit<CompetitiveMetricsHistory, "id" | "recorded_at">;
+
+export interface CompetitiveSummary {
+  competitor_count: number;
+  avg_strength: number;
+  organic_traffic: number;
+  keyword_gap_count: number;
+  citation_sov: number;
+  last_analysis_at: string | null;
+}
+
+export interface KeywordGapOpportunity {
+  keyword: string;
+  client_position: number | null;
+  competitor_position: number | null;
+  competitor_domain: string;
+  competitor_id: string;
+  search_volume: number;
+  difficulty: number;
+}
+
+export interface DomainMetrics {
+  domain: string;
+  organic_traffic: number;
+  organic_keywords: number;
+  backlinks: number;
+  domain_rank: number;
+}

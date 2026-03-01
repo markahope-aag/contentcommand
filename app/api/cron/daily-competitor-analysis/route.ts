@@ -58,6 +58,27 @@ export async function POST(request: NextRequest) {
           expires_at: expires.toISOString(),
         });
 
+        // Write metrics history for trend charts
+        const metrics = domainMetrics as Record<string, unknown>;
+        const historyRows: { client_id: string; metric_type: string; metric_value: number }[] = [];
+        if (metrics?.organic_traffic != null) {
+          historyRows.push({
+            client_id: client.id,
+            metric_type: "organic_traffic",
+            metric_value: Number(metrics.organic_traffic),
+          });
+        }
+        if (metrics?.organic_keywords != null) {
+          historyRows.push({
+            client_id: client.id,
+            metric_type: "keyword_count",
+            metric_value: Number(metrics.organic_keywords),
+          });
+        }
+        if (historyRows.length > 0) {
+          await admin.from("competitive_metrics_history").insert(historyRows);
+        }
+
         // Keyword gap analysis for each competitor — in parallel
         const competitors = competitorsByClient.get(client.id) ?? [];
         if (competitors.length) {
@@ -76,6 +97,18 @@ export async function POST(request: NextRequest) {
                 data: keywords as Record<string, unknown>,
                 expires_at: expires.toISOString(),
               });
+
+              // Track keyword overlap metric per competitor
+              const kwData = keywords as Record<string, unknown>;
+              const items = Array.isArray(kwData?.items) ? kwData.items : [];
+              if (items.length > 0) {
+                await admin.from("competitive_metrics_history").insert({
+                  client_id: client.id,
+                  competitor_id: comp.id,
+                  metric_type: "keyword_overlap",
+                  metric_value: items.length,
+                });
+              }
             })
           );
 

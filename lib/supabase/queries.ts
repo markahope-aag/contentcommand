@@ -20,6 +20,9 @@ import type {
   AiCitation,
   Organization,
   OrganizationMember,
+  CompetitiveMetricsHistory,
+  CompetitiveSummary,
+  KeywordGapOpportunity,
 } from "@/types/database";
 
 // ── Organizations ───────────────────────────────────────────
@@ -653,4 +656,112 @@ export async function getAiCitations(clientId: string): Promise<AiCitation[]> {
 
   if (error) throw error;
   return data;
+}
+
+// ── Competitive Intelligence (Stage 4) ──────────────────
+
+export async function getCompetitiveSummary(
+  clientId: string
+): Promise<CompetitiveSummary> {
+  const cacheKey = `cc:competitive-summary:${clientId}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_competitive_summary", {
+      p_client_id: clientId,
+    });
+
+    if (error) throw error;
+
+    const raw = data as CompetitiveSummary | null;
+    return {
+      competitor_count: raw?.competitor_count ?? 0,
+      avg_strength: raw?.avg_strength ?? 0,
+      organic_traffic: raw?.organic_traffic ?? 0,
+      keyword_gap_count: raw?.keyword_gap_count ?? 0,
+      citation_sov: raw?.citation_sov ?? 0,
+      last_analysis_at: raw?.last_analysis_at ?? null,
+    };
+  }, 300);
+}
+
+export async function getCompetitiveMetricsHistory(
+  clientId: string,
+  metricType?: string,
+  days = 30
+): Promise<CompetitiveMetricsHistory[]> {
+  const cacheKey = `cc:competitive-history:${clientId}:${metricType ?? "all"}:${days}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    let query = supabase
+      .from("competitive_metrics_history")
+      .select("*")
+      .eq("client_id", clientId)
+      .gte("recorded_at", since.toISOString())
+      .order("recorded_at", { ascending: true });
+
+    if (metricType) query = query.eq("metric_type", metricType);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }, 300);
+}
+
+export async function getKeywordGaps(
+  clientId: string,
+  competitorId?: string
+): Promise<KeywordGapOpportunity[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("competitive_analysis")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("analysis_type", "keyword_gap")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+
+  if (competitorId) query = query.eq("competitor_id", competitorId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  // Parse JSONB keyword_gap data into KeywordGapOpportunity[]
+  const gaps: KeywordGapOpportunity[] = [];
+  for (const row of data) {
+    const items = (row.data as Record<string, unknown>)?.items;
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      const i = item as Record<string, unknown>;
+      gaps.push({
+        keyword: String(i.keyword ?? ""),
+        client_position: i.client_position != null ? Number(i.client_position) : null,
+        competitor_position: i.competitor_position != null ? Number(i.competitor_position) : null,
+        competitor_domain: String(i.competitor_domain ?? row.data?.competitor_domain ?? ""),
+        competitor_id: row.competitor_id ?? "",
+        search_volume: Number(i.search_volume ?? 0),
+        difficulty: Number(i.difficulty ?? 0),
+      });
+    }
+  }
+  return gaps;
+}
+
+export async function getTopOpportunities(
+  clientId: string,
+  limit = 20
+): Promise<KeywordGapOpportunity[]> {
+  const allGaps = await getKeywordGaps(clientId);
+  // Filter to gaps where competitor ranks but client doesn't (or ranks much lower)
+  return allGaps
+    .filter(
+      (g) =>
+        g.competitor_position != null &&
+        g.competitor_position <= 20 &&
+        (g.client_position == null || g.client_position > 20)
+    )
+    .sort((a, b) => b.search_volume - a.search_volume)
+    .slice(0, limit);
 }

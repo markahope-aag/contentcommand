@@ -230,6 +230,18 @@ export const addOrgMemberSchema = z.object({
   role: z.enum(["owner", "admin", "member"]).default("member"),
 });
 
+// ── Competitive Intelligence ────────────────────────────
+
+export const competitiveRefreshSchema = z.object({
+  clientId,
+});
+
+export const llmrefsSyncSchema = z.object({
+  clientId,
+  organizationId: trimmedId.pipe(z.string().min(1, "organizationId is required")),
+  projectId: trimmedId.pipe(z.string().min(1, "projectId is required")),
+});
+
 // ── Validation helper ───────────────────────────────────
 
 export function validateBody<T>(

@@ -448,7 +448,7 @@ describe('Dashboard Navigation', () => {
       expect(menuList).toBeInTheDocument()
 
       const menuItems = screen.getAllByRole('listitem')
-      expect(menuItems).toHaveLength(6) // One for each navigation item
+      expect(menuItems).toHaveLength(7) // One for each navigation item
     })
 
     it('provides proper focus management', () => {
