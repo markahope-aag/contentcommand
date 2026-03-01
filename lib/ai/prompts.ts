@@ -8,6 +8,8 @@ interface BriefGenerationInput {
   competitiveData: Record<string, unknown>[];
   citationData: Record<string, unknown>[];
   contentType?: string;
+  serpAnalysis?: Record<string, unknown> | null;
+  semanticKeywords?: string[] | null;
 }
 
 interface ContentGenerationInput {
@@ -53,6 +55,14 @@ export function buildBriefGenerationPrompt(input: BriefGenerationInput): string 
     ? `\n## Existing Target Keywords\n${input.targetKeywords.join(", ")}`
     : "";
 
+  const serpAnalysisSection = input.serpAnalysis
+    ? `\n## SERP Analysis (Frase)\nReal-time analysis of top-ranking content for this keyword:\n${JSON.stringify(input.serpAnalysis, null, 2)}`
+    : "\n## SERP Analysis\nNo SERP analysis data available.";
+
+  const fraseKeywordsSection = input.semanticKeywords?.length
+    ? `\n## Semantic Keywords (Frase)\nData-driven related keywords to include:\n${input.semanticKeywords.join(", ")}`
+    : "";
+
   return `You are a strategic content intelligence analyst. Generate a comprehensive content brief for the following:
 
 ## Client
@@ -67,11 +77,13 @@ ${input.targetKeyword}
 
 ## Content Type
 ${input.contentType || "blog_post"}
+${serpAnalysisSection}
+${fraseKeywordsSection}
 ${competitiveSection}
 ${citationSection}
 
 ## Instructions
-Analyze the competitive landscape and AI citation opportunities to create a detailed content brief. Return your response as a JSON object with exactly these fields:
+Analyze the SERP data, semantic keywords, competitive landscape, and AI citation opportunities to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy. Return your response as a JSON object with exactly these fields:
 
 {
   "title": "Compelling, SEO-optimized title",

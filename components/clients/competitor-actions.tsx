@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeString, sanitizeDomain } from "@/lib/sanitize";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,6 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
   const [domain, setDomain] = useState("");
   const [strength, setStrength] = useState("5");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
 
   async function handleAdd(e: React.FormEvent) {

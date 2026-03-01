@@ -4,6 +4,8 @@ import { generateWithClaude } from "./claude-client";
 import { generateWithOpenAI } from "./openai-client";
 import { analyzeContentQuality } from "./quality-analyzer";
 import { buildBriefGenerationPrompt, buildContentGenerationPrompt, SYSTEM_PROMPTS } from "./prompts";
+import { frase } from "@/lib/integrations/frase";
+import { logger } from "@/lib/logger";
 import type {
   ContentBrief,
   GeneratedContent,
@@ -82,6 +84,89 @@ function summarizeCitationData(rawData: Record<string, unknown>[]): Record<strin
   });
 }
 
+/**
+ * Merge keyword arrays, deduplicating by lowercase. Frase keywords take priority.
+ */
+function mergeKeywords(fraseKeywords: string[] | null, aiKeywords: string[] | null): string[] | null {
+  const frase = fraseKeywords || [];
+  const ai = aiKeywords || [];
+  if (!frase.length && !ai.length) return null;
+
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const kw of [...frase, ...ai]) {
+    const lower = kw.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      merged.push(kw);
+    }
+  }
+  return merged;
+}
+
+/**
+ * Summarize Frase SERP analysis to keep prompt size manageable.
+ * Extracts top-ranking page titles, word counts, headings, and key topics.
+ */
+function summarizeSerpAnalysis(data: Record<string, unknown>): Record<string, unknown> {
+  const summary: Record<string, unknown> = {};
+
+  // Frase SERP responses typically include results array with page analysis
+  if (Array.isArray(data.results)) {
+    summary.top_results = (data.results as Record<string, unknown>[]).slice(0, 10).map((r) => ({
+      title: r.title,
+      url: r.url,
+      word_count: r.word_count || r.wordCount,
+      headings: Array.isArray(r.headings) ? (r.headings as string[]).slice(0, 10) : undefined,
+      topics: Array.isArray(r.topics) ? (r.topics as string[]).slice(0, 10) : undefined,
+    }));
+  }
+
+  // Extract average metrics if available
+  for (const key of ["avg_word_count", "avgWordCount", "topic_score", "topicScore", "questions"]) {
+    if (key in data) summary[key] = data[key];
+  }
+
+  // If Frase returns questions people ask
+  if (Array.isArray(data.questions)) {
+    summary.questions = (data.questions as string[]).slice(0, 10);
+  }
+
+  // Fallback: if structure is unexpected, take safe truncated snapshot
+  if (Object.keys(summary).length === 0) {
+    const str = JSON.stringify(data);
+    return { raw_summary: str.length > 3000 ? str.substring(0, 3000) + "...(truncated)" : str };
+  }
+
+  return summary;
+}
+
+/**
+ * Extract semantic keyword strings from Frase response.
+ */
+function extractSemanticKeywords(data: Record<string, unknown>): string[] | null {
+  // Frase semantic endpoint returns keywords in various formats
+  if (Array.isArray(data.keywords)) {
+    return (data.keywords as Array<string | Record<string, unknown>>)
+      .slice(0, 50)
+      .map((k) => (typeof k === "string" ? k : (k.keyword as string) || (k.term as string) || ""))
+      .filter(Boolean);
+  }
+  if (Array.isArray(data.results)) {
+    return (data.results as Array<string | Record<string, unknown>>)
+      .slice(0, 50)
+      .map((k) => (typeof k === "string" ? k : (k.keyword as string) || (k.term as string) || ""))
+      .filter(Boolean);
+  }
+  if (Array.isArray(data.terms)) {
+    return (data.terms as Array<string | Record<string, unknown>>)
+      .slice(0, 50)
+      .map((k) => (typeof k === "string" ? k : (k.term as string) || ""))
+      .filter(Boolean);
+  }
+  return null;
+}
+
 export async function generateBrief(options: GenerateBriefOptions): Promise<ContentBrief> {
   const { clientId, targetKeyword, contentType = "blog_post" } = options;
   const supabase = await createClient();
@@ -110,6 +195,32 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     .order("tracked_at", { ascending: false })
     .limit(10);
 
+  // Fetch Frase SERP analysis and semantic keywords in parallel
+  let serpAnalysis: Record<string, unknown> | null = null;
+  let fraseSemanticKeywords: string[] | null = null;
+
+  try {
+    const [serpResult, semanticResult] = await Promise.allSettled([
+      frase.analyzeSerp(targetKeyword, clientId),
+      frase.getSemanticKeywords(targetKeyword, clientId),
+    ]);
+
+    if (serpResult.status === "fulfilled" && serpResult.value) {
+      const serpData = serpResult.value as Record<string, unknown>;
+      // Summarize SERP data to keep prompt size reasonable
+      serpAnalysis = summarizeSerpAnalysis(serpData);
+    }
+
+    if (semanticResult.status === "fulfilled" && semanticResult.value) {
+      const semData = semanticResult.value as Record<string, unknown>;
+      // Extract keyword strings from Frase response
+      fraseSemanticKeywords = extractSemanticKeywords(semData);
+    }
+  } catch (err) {
+    // Frase is enrichment — don't fail the brief if it's unavailable
+    logger.warn("Frase enrichment failed during brief generation", { error: err as Error });
+  }
+
   const prompt = buildBriefGenerationPrompt({
     clientName: client.name,
     clientDomain: client.domain,
@@ -120,6 +231,8 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     competitiveData: summarizeCompetitiveData((competitiveData || []).map((d) => d.data)),
     citationData: summarizeCitationData((citationData || []).map((d) => d.data || {})),
     contentType,
+    serpAnalysis,
+    semanticKeywords: fraseSemanticKeywords,
   });
 
   const result = await generateWithClaude({
@@ -145,12 +258,17 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
       competitive_gap: briefData.competitive_gap as string || null,
       ai_citation_opportunity: briefData.ai_citation_opportunity as string || null,
       target_audience: briefData.target_audience as string || null,
-      serp_content_analysis: briefData.serp_content_analysis as string || null,
+      serp_content_analysis: serpAnalysis
+        ? JSON.stringify(serpAnalysis)
+        : (briefData.serp_content_analysis as string || null),
       authority_signals: briefData.authority_signals as string || null,
       controversial_positions: briefData.controversial_positions as string || null,
       target_word_count: (briefData.target_word_count as number) || 1500,
       required_sections: briefData.required_sections as string[] || null,
-      semantic_keywords: briefData.semantic_keywords as string[] || null,
+      semantic_keywords: mergeKeywords(
+        fraseSemanticKeywords,
+        briefData.semantic_keywords as string[] | null,
+      ),
       priority_level: briefData.priority_level as string || "medium",
       competitive_gap_analysis: briefData.competitive_gap_analysis || null,
       ai_citation_opportunity_data: briefData.ai_citation_opportunity_data || null,
@@ -189,6 +307,39 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     .update({ status: "generating" })
     .eq("id", briefId);
 
+  // Enrich with fresh Frase SERP data for content generation
+  let serpContentAnalysis = brief.serp_content_analysis;
+  let semanticKeywords = brief.semantic_keywords;
+
+  try {
+    const [serpResult, semanticResult] = await Promise.allSettled([
+      frase.analyzeSerp(brief.target_keyword, resolvedClientId),
+      !semanticKeywords?.length
+        ? frase.getSemanticKeywords(brief.target_keyword, resolvedClientId)
+        : Promise.resolve(null),
+    ]);
+
+    if (serpResult.status === "fulfilled" && serpResult.value) {
+      const serpData = summarizeSerpAnalysis(serpResult.value as Record<string, unknown>);
+      serpContentAnalysis = JSON.stringify(serpData);
+    }
+
+    if (semanticResult.status === "fulfilled" && semanticResult.value) {
+      const fraseKeywords = extractSemanticKeywords(semanticResult.value as Record<string, unknown>);
+      if (fraseKeywords?.length) {
+        // Merge Frase keywords with any existing ones, deduplicating
+        const existing = new Set((semanticKeywords || []).map((k: string) => k.toLowerCase()));
+        const merged = [...(semanticKeywords || [])];
+        for (const kw of fraseKeywords) {
+          if (!existing.has(kw.toLowerCase())) merged.push(kw);
+        }
+        semanticKeywords = merged;
+      }
+    }
+  } catch (err) {
+    logger.warn("Frase enrichment failed during content generation", { error: err as Error });
+  }
+
   const prompt = buildContentGenerationPrompt({
     briefTitle: brief.title,
     targetKeyword: brief.target_keyword,
@@ -198,12 +349,12 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     uniqueAngle: brief.unique_angle,
     competitiveGap: brief.competitive_gap,
     requiredSections: brief.required_sections,
-    semanticKeywords: brief.semantic_keywords,
+    semanticKeywords,
     internalLinks: brief.internal_links,
     authoritySignals: brief.authority_signals,
     controversialPositions: brief.controversial_positions,
     brandVoice: brief.client_voice_profile,
-    serpContentAnalysis: brief.serp_content_analysis,
+    serpContentAnalysis,
   });
 
   const startTime = Date.now();
