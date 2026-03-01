@@ -233,7 +233,7 @@ Return ONLY the JSON object, no markdown fences or explanation.`;
 }
 
 export function buildQualityScoringPrompt(input: QualityScoringInput): string {
-  return `You are a content quality analyst. Score the following content on multiple dimensions.
+  return `You are a rigorous content quality analyst who evaluates articles against the standards used by professional content auditing platforms. You score harshly and specifically — a score of 70 means "acceptable but needs work", 85+ means "publication-ready", and 90+ means "exceptional".
 
 ## Content to Analyze
 Title: ${input.title || "Untitled"}
@@ -246,8 +246,9 @@ Actual Word Count: ${input.content.split(/\s+/).length}
 ## Content
 ${input.content.substring(0, 8000)}
 
-## Scoring Instructions
-Score each dimension from 0-100 and provide specific feedback:
+## Scoring Dimensions
+
+Score each dimension from 0-100 based on the specific criteria below. Be strict — do not inflate scores. If the content fails a criterion, penalize meaningfully.
 
 Return a JSON object:
 {
@@ -268,12 +269,52 @@ Return a JSON object:
   }
 }
 
-Scoring guidelines:
-- SEO: keyword usage, heading structure, meta description, internal linking
-- Readability: sentence length variety, paragraph structure, transitions, jargon usage
-- Authority: E-E-A-T signals, data citations, expert positioning, specificity
-- Engagement: hook quality, storytelling, CTAs, visual content suggestions
-- AEO: clear definitions, factual statements, FAQ potential, structured data readiness
+## Scoring Criteria (apply these strictly)
+
+### SEO Score
+- Target keyword appears naturally in H1, first paragraph, at least 2 H2s, meta description, and conclusion
+- Keyword density is 2-3% (not stuffed, not absent)
+- Proper heading hierarchy (H1 → H2 → H3, no skipped levels)
+- Semantic keywords and related terms are woven throughout the prose
+- Internal and external links are present and contextually relevant
+- Meta description is under 155 characters, includes keyword and a compelling reason to click
+- Penalize: keyword stuffing, missing headings, no links, generic meta description
+
+### Readability Score
+- Paragraphs focus on ONE idea each (topic sentence → evidence → analysis → transition)
+- Sentence length varies (mix of short punchy and longer explanatory sentences)
+- Smooth transitions between paragraphs and sections — not choppy or disconnected
+- Content is primarily flowing prose (80%+ paragraphs). Bullet points used sparingly and only for listing specific items
+- No jargon without inline definitions on first use
+- FAQ answers are direct and concise (2-3 sentences), not mini-essays
+- Penalize heavily: bullet-point-heavy content, paragraphs mixing multiple unrelated ideas, wall-of-text sections without subheadings, undefined acronyms
+
+### Authority Score
+- Specific numbers, percentages, timeframes, and dollar amounts support claims
+- Named frameworks referenced (SWOT, PESTLE, Porter's Five Forces, etc.) with definitions
+- Named companies, tools, and real-world examples cited (not generic "many organizations")
+- External authoritative references present (academic, .gov, .edu, industry reports, named experts)
+- Concrete case studies with named organizations, specific outcomes, and measurable results
+- E-E-A-T signals: demonstrates experience, expertise, authoritativeness, and trustworthiness
+- Penalize heavily: vague claims ("significant improvement", "many companies"), no named sources, no specific data points, conceptual content without concrete examples
+
+### Engagement Score
+- Opening hook is specific and compelling (statistic, anecdote, or provocative question — not a generic overview)
+- Key Takeaways section present near the top with 4-6 crisp, measurable bullet points
+- Rich content elements present: comparison tables, numbered frameworks, blockquotes with attribution, case study callouts
+- At least one markdown table in the article
+- Conclusion has a specific, actionable call-to-action
+- Content variety: not monotonous in format — mixes prose, tables, quotes, frameworks
+- Penalize: generic introduction, no Key Takeaways, no tables or rich elements, weak/missing CTA, monotonous format
+
+### AEO (AI Engine Optimization) Score
+- FAQ section present with 5-6 Q&A pairs formatted as H3 questions
+- FAQ answers are clear, factual, standalone statements that AI can cite directly
+- Key terms and concepts are explicitly defined in complete sentences
+- Claims are structured as citable factual statements ("X is defined as...", "According to [source], Y results in Z")
+- No semantic repetition — Key Takeaways, body, and Conclusion express the same ideas in different language
+- Assertive language throughout — no hedging with "often", "can", "sometimes", "may", "might"
+- Penalize: missing FAQ, hedging language, undefined terms, repetitive phrasing across sections, no citable definitions
 
 Return ONLY the JSON object, no markdown fences or explanation.`;
 }
@@ -281,5 +322,5 @@ Return ONLY the JSON object, no markdown fences or explanation.`;
 export const SYSTEM_PROMPTS = {
   briefGeneration: "You are a strategic content intelligence analyst. You analyze competitive landscapes and generate data-driven content briefs. Always return valid JSON.",
   contentGeneration: "You are an expert content strategist who writes like a senior consultant — analytical, specific, and authoritative. Your articles use flowing paragraphs with concrete data, named frameworks, comparison tables, and real-world case studies. You never write bullet-point listicles. Every article includes Key Takeaways at the top and FAQ at the bottom. You define technical terms on first use and cite authoritative sources throughout. Always return valid JSON.",
-  qualityScoring: "You are a content quality analyst who provides objective, consistent scoring of content across multiple dimensions. Always return valid JSON with scores from 0-100.",
+  qualityScoring: "You are a rigorous content quality analyst. You score strictly against professional editorial standards — specificity, rich content elements, paragraph cohesion, assertive language, FAQ quality, semantic variety, and authoritative sourcing. A 70 is acceptable, 85+ is publication-ready, 90+ is exceptional. Do not inflate scores. Always return valid JSON.",
 };
