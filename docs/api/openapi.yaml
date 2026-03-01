@@ -715,6 +715,417 @@ paths:
                     type: string
                     example: "Sync initiated for all integrations"
 
+  # Content Generation
+  /content/generate:
+    post:
+      summary: Generate content from brief
+      description: Generate content from an approved content brief using AI
+      tags: [Content]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [briefId]
+              properties:
+                briefId:
+                  type: string
+                  format: uuid
+                  description: ID of the content brief to generate from
+                model:
+                  type: string
+                  enum: [gpt-4, gpt-3.5-turbo, claude-3-opus, claude-3-sonnet]
+                  default: gpt-4
+                  description: AI model to use for generation
+      responses:
+        '200':
+          description: Content generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GeneratedContent'
+        '404':
+          description: Brief not found
+        '403':
+          description: Access denied to brief
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Rate limit exceeded"
+                  retryAfter:
+                    type: number
+                    description: Seconds to wait before retrying
+
+  /content/score:
+    post:
+      summary: Score content quality
+      description: Analyze and score content quality using AI
+      tags: [Content]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: Content to analyze and score
+                targetKeyword:
+                  type: string
+                  description: Target keyword for SEO analysis
+      responses:
+        '200':
+          description: Content scored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      qualityScore:
+                        type: number
+                        minimum: 0
+                        maximum: 100
+                      authorityScore:
+                        type: number
+                      expertiseScore:
+                        type: number
+                      readabilityScore:
+                        type: number
+                      optimizationScore:
+                        type: number
+
+  /content/performance/{clientId}:
+    get:
+      summary: Get content performance
+      description: Get performance metrics for client's content
+      tags: [Content]
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+      responses:
+        '200':
+          description: Performance metrics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      totalContent:
+                        type: integer
+                      avgQualityScore:
+                        type: number
+                      contentByStatus:
+                        type: object
+                      performanceTrend:
+                        type: array
+                        items:
+                          type: object
+
+  # Competitive Intelligence
+  /competitive-intelligence/{clientId}/summary:
+    get:
+      summary: Get competitive summary
+      description: Get competitive intelligence summary for a client
+      tags: [Competitive Intelligence]
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Competitive summary retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      summary:
+                        type: object
+                        properties:
+                          totalCompetitors:
+                            type: integer
+                          avgAuthorityScore:
+                            type: number
+                          keywordGaps:
+                            type: integer
+                          opportunityScore:
+                            type: number
+                      competitors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            domain:
+                              type: string
+                            authorityScore:
+                              type: number
+                            contentGaps:
+                              type: integer
+
+  /competitive-intelligence/{clientId}/gaps:
+    get:
+      summary: Get keyword gaps
+      description: Get keyword gap analysis for a client
+      tags: [Competitive Intelligence]
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: competitor
+          in: query
+          schema:
+            type: string
+          description: Specific competitor domain to analyze
+      responses:
+        '200':
+          description: Keyword gaps retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        keyword:
+                          type: string
+                        difficulty:
+                          type: number
+                        volume:
+                          type: integer
+                        opportunity:
+                          type: string
+                          enum: [high, medium, low]
+
+  /competitive-intelligence/{clientId}/refresh:
+    post:
+      summary: Refresh competitive data
+      description: Trigger refresh of competitive intelligence data for a client
+      tags: [Competitive Intelligence]
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Refresh initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Competitive data refresh initiated"
+
+  # Integration-specific endpoints
+  /integrations/google/auth:
+    post:
+      summary: Get Google OAuth URL
+      description: Get Google OAuth authorization URL for a client
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId]
+              properties:
+                clientId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: OAuth URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+
+  /integrations/llmrefs/sync:
+    post:
+      summary: Sync LLMRefs data
+      description: Sync AI citation data from LLMRefs
+      tags: [Integrations]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clientId:
+                  type: string
+                  format: uuid
+                  description: Specific client to sync (optional)
+      responses:
+        '200':
+          description: LLMRefs sync completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      citationsProcessed:
+                        type: integer
+                      newCitations:
+                        type: integer
+
+  /integrations/dataforseo/competitors:
+    post:
+      summary: Analyze competitors with DataForSEO
+      description: Get competitor analysis data from DataForSEO
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain, keywords]
+              properties:
+                domain:
+                  type: string
+                  description: Client domain to analyze
+                keywords:
+                  type: array
+                  items:
+                    type: string
+                  description: Keywords to analyze for competition
+                location:
+                  type: string
+                  default: "United States"
+      responses:
+        '200':
+          description: Competitor analysis completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      competitors:
+                        type: array
+                        items:
+                          type: object
+                      keywordData:
+                        type: object
+
+  /integrations/frase/content-analysis:
+    post:
+      summary: Analyze content with Frase
+      description: Get content optimization suggestions from Frase
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, targetKeyword]
+              properties:
+                content:
+                  type: string
+                  description: Content to analyze
+                targetKeyword:
+                  type: string
+                  description: Target keyword for optimization
+      responses:
+        '200':
+          description: Content analysis completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      optimizationScore:
+                        type: number
+                      suggestions:
+                        type: array
+                        items:
+                          type: string
+                      keywordDensity:
+                        type: object
+
+  # Cron Jobs
+  /cron/daily-competitor-analysis:
+    post:
+      summary: Daily competitor analysis cron job
+      description: Scheduled task to refresh competitive intelligence data for all clients
+      tags: [Cron Jobs]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Cron job executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Daily competitor analysis completed"
+                  processed:
+                    type: integer
+                    description: Number of clients processed
+        '401':
+          description: Invalid or missing cron secret
+
 components:
   securitySchemes:
     BearerAuth:
@@ -722,6 +1133,11 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT token from Supabase Auth
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: API key for cron job authentication (Bearer CRON_SECRET)
 
   parameters:
     Page:

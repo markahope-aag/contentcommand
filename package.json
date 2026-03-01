@@ -39,6 +39,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.71.2",
     "recharts": "^3.7.0",
+    "swagger-ui-react": "^5.32.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"
@@ -52,6 +53,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/swagger-ui-react": "^5.18.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "eslint-plugin-jsx-a11y": "^6.10.2",

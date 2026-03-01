@@ -27,6 +27,7 @@ const navigation = [
   { name: "Competitive Intel", href: "/dashboard/competitive-intelligence", icon: "🎯" },
   { name: "Integrations", href: "/dashboard/integrations", icon: "🔌" },
   { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
+  { name: "API Docs", href: "/docs", icon: "📚" },
 ];
 
 export function AppSidebar() {

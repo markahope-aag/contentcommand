@@ -2,9 +2,26 @@
 
 This guide shows you how to explore and test the Content Command API using Swagger UI.
 
-## Online Documentation
+## Integrated Documentation
 
-The interactive API documentation is available at:
+### Access the Interactive Docs
+
+Content Command includes an integrated Swagger UI interface for seamless API exploration:
+
+- **Production**: https://contentcommand.vercel.app/docs
+- **Development**: http://localhost:3000/docs
+
+### Features
+
+- **Auto-authentication**: Logged-in users automatically have their auth tokens included in API requests
+- **Interactive testing**: Test endpoints directly from the browser with real data
+- **Schema validation**: View detailed request/response formats with examples
+- **Error handling**: See comprehensive error responses and status codes
+- **Real-time updates**: Documentation stays in sync with the latest API changes
+
+## Raw OpenAPI Specification
+
+The OpenAPI specification is also available at:
 - **Production**: https://contentcommand.vercel.app/api/docs
 - **Development**: http://localhost:3000/api/docs
 
