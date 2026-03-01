@@ -85,7 +85,7 @@ ${citationSection}
 ## Instructions
 Analyze the SERP data, semantic keywords, competitive landscape, and AI citation opportunities to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy.
 
-The final article will be a long-form editorial with flowing paragraphs (not bullet-point heavy), a Key Takeaways box at the top, and an FAQ section at the bottom. Design the required_sections accordingly — each section should be a topic area that will contain 3-5 paragraphs of substantive analysis, not a list heading.
+The final article will be a long-form editorial written like a Harvard Business Review piece — flowing paragraphs with concrete data, named frameworks (SWOT, PESTLE, etc.), comparison tables, case studies, and authoritative source citations. It will have Key Takeaways at the top and an FAQ section at the bottom. Design the required_sections accordingly — each section should be a topic area that will contain 3-5 paragraphs of substantive, specific analysis with at least one rich content element (table, framework, case study, or expert quote). Sections should NOT be list headings.
 
 Return your response as a JSON object with exactly these fields:
 
@@ -126,7 +126,7 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
     ? `\n## Brand Voice\n${JSON.stringify(input.brandVoice, null, 2)}`
     : "";
 
-  return `You are an expert content writer specializing in SEO-optimized, authoritative content that ranks well in both traditional search and AI search engines.
+  return `You are an expert content strategist and writer who produces long-form, editorial-quality articles. Your writing style combines the analytical depth of Harvard Business Review with the accessibility of a senior consultant briefing a knowledgeable client. You write in flowing, substantive paragraphs — not bullet-point listicles.
 
 ## Content Brief
 - Title: ${input.briefTitle}
@@ -150,43 +150,82 @@ ${input.controversialPositions || "Take well-reasoned positions backed by data"}
 ${input.serpContentAnalysis || "No SERP analysis available"}
 ${brandVoice}
 
-## Writing Style & Structure Instructions
+## ARTICLE STRUCTURE (follow this exactly)
 
-Write a long-form, magazine-quality article that reads like a well-crafted editorial — NOT a list of bullet points. Follow this structure:
+### 1. Key Takeaways (immediately after the H1)
+A blockquote or callout box with 4-6 crisp, measurable bullet points (e.g., "Companies using X see 34% higher Y"). Each bullet must contain a specific number, timeframe, or named example. This is the ONLY place where a pure bullet list is acceptable.
 
-### Article Structure
-1. **Key Takeaways** — Start with a "Key Takeaways" box (3-5 bullet points summarizing the article's core insights). This is the ONLY section that should be bullet points.
-2. **Introduction** — 2-3 paragraphs with an engaging hook, context-setting, and a clear thesis. Draw the reader in with a story, surprising statistic, or provocative question.
-3. **Body Sections** (H2/H3 headings) — The bulk of the article. Each section should contain:
-   - **Flowing paragraphs** (3-5 sentences each) that explain, analyze, and argue — not bullets
-   - Concrete examples, data points, and real-world scenarios woven into the prose
-   - Smooth transitions between paragraphs and sections
-   - Use bullet points or numbered lists ONLY when listing specific items (tools, steps, features) — never as the primary content format
-4. **FAQ Section** — End with an "## Frequently Asked Questions" section containing 4-6 Q&A pairs formatted as H3 questions with paragraph answers. Base these on real questions people ask about this topic.
-5. **Conclusion** — 1-2 paragraphs summarizing key insights and a clear call-to-action.
+### 2. Introduction (2-3 paragraphs)
+Open with a surprising statistic, a concrete anecdote, or a provocative question — not a generic overview. Set context, state the thesis clearly, and preview what the reader will learn. End the introduction with a one-sentence thesis or promise statement.
 
-### Writing Quality
-- Write in a confident, authoritative voice — like an industry expert explaining to a knowledgeable peer
-- Every paragraph should contain substantive analysis, not just surface-level descriptions
-- Use specific numbers, percentages, timeframes, and named examples (not vague generalities)
-- Vary sentence length — mix short punchy sentences with longer explanatory ones
-- Target the primary keyword naturally (2-3% density) and weave semantic keywords into the prose
-- Demonstrate E-E-A-T: cite sources, reference methodologies, show first-hand expertise
-- Optimize for AI search citation with clear, factual, well-attributed statements
-- The content-to-bullet ratio should be at least 80% prose paragraphs, 20% or less lists
+### 3. Body Sections (H2 and H3 headings)
+Each H2 section should contain:
+- **3-5 flowing paragraphs** of substantive analysis (not surface-level descriptions)
+- Each paragraph focuses on ONE idea with definition, comparison, and practical recommendation
+- **At least one rich content element per section**: a markdown comparison table, a numbered process/framework, a blockquote with attribution, or a concrete case study
+- **Specific frameworks and models by name** (e.g., SWOT, PESTLE, OODA loop, Porter's Five Forces, Jobs-to-Be-Done) with brief definitions on first use
+- **Concrete metrics**: sample KPIs, percentages, market share figures, timeframes, tool names (e.g., "use SEMrush for competitor keyword gaps", "use Trello/Jira for execution tracking")
+- **2-3 authoritative external references per section** — cite academic sources, industry reports, named experts, government/standards bodies. Format as inline markdown links to plausible authoritative URLs (Wikipedia, .gov, .edu, industry association sites)
+- Smooth transitions between paragraphs — each paragraph's opening sentence should connect to the previous paragraph's conclusion
+
+### 4. Frequently Asked Questions (H2: "Frequently Asked Questions")
+5-6 Q&A pairs. Each question is an H3. Each answer is 2-3 sentences giving a direct, concise response — not a mini-essay. Base questions on real search queries and "People Also Ask" patterns for this keyword. Answers should be written as standalone factual statements that AI search engines can cite directly.
+
+### 5. Conclusion (1-2 paragraphs)
+Summarize the 3 most important insights (using different phrasing than Key Takeaways — no verbatim repetition). End with a specific, actionable call-to-action.
+
+## WRITING QUALITY REQUIREMENTS
+
+### Specificity (critical — this is where most content fails)
+- NEVER write vague statements like "many companies" or "significant improvement" or "in recent years"
+- ALWAYS use specific: company names, dollar amounts, percentages, timeframes, tool names, framework names, study citations
+- Every claim should have a concrete example, a number, or a named reference attached to it
+
+### Semantic Repetition (avoid)
+- Do NOT repeat the same key themes verbatim across sections. Use natural variants and synonyms
+- The Key Takeaways and Conclusion should express the same ideas in completely different language
+- Vary how you reference the target keyword — use synonyms, related phrases, and natural language variants
+
+### Assertive Language
+- Write with confidence. Avoid hedging words: "often", "can", "sometimes", "may", "might", "generally"
+- Instead use: "consistently", "research shows", "data confirms", "organizations that X achieve Y"
+- Make evidence-backed claims, not wishy-washy suggestions
+
+### Terminology & Definitions
+- Define every domain-specific term, acronym, or framework on first use with a brief inline definition
+- Example: "the OODA loop (Observe, Orient, Decide, Act) — a decision-making framework originally developed by military strategist John Boyd —"
+
+### Paragraph Cohesion
+- Each paragraph should contain exactly ONE main idea
+- Structure: topic sentence → evidence/example → analysis → transition to next idea
+- Never mix multiple unrelated concepts in a single paragraph
+
+### Rich Content Elements (MUST include at least 3 of these across the article)
+- Markdown comparison tables (at least one, e.g., Feature vs Feature, Option A vs Option B)
+- Numbered step-by-step processes or frameworks
+- Blockquotes with attributed expert quotes
+- Concrete case studies with named organizations, specific outcomes, and timeframes
+
+### Tone
+- Professional, instructive, authoritative — like a senior consultant briefing a knowledgeable client
+- Keep promotional language confined to the CTA in the conclusion only
+- No emotional or dramatic phrasing — "battlefield victories" is too inflammatory; use "competitive advantages" instead
+- Standardize formality throughout — don't switch between casual and formal registers
+
+## OUTPUT FORMAT
 
 Return your response as a JSON object:
 {
-  "title": "Final optimized title",
-  "meta_description": "155 character max meta description",
-  "excerpt": "2-3 sentence excerpt for previews",
-  "content": "Full article content in markdown format. Must be primarily flowing paragraphs with minimal bullet points. Must include Key Takeaways at top and FAQ section at bottom.",
-  "internal_links_added": ["links used"],
-  "external_references": ["sources referenced"],
+  "title": "Final optimized title — specific and compelling, not generic",
+  "meta_description": "155 character max. Include target keyword, a specific benefit, and a reason to click.",
+  "excerpt": "2-3 sentence excerpt for previews. Specific, not vague.",
+  "content": "Full article in markdown. H2/H3 headings, flowing paragraphs, comparison tables, FAQ section, minimal bullet points except Key Takeaways.",
+  "internal_links_added": ["links used in the article"],
+  "external_references": ["authoritative sources referenced — Wikipedia, .gov, .edu, industry reports"],
   "aeo_optimizations": {
-    "featured_snippet_targets": [],
-    "faq_schema_questions": [],
-    "clear_definitions": []
+    "featured_snippet_targets": ["questions this content directly answers in 1-2 sentences"],
+    "faq_schema_questions": ["questions from the FAQ section suitable for FAQ schema markup"],
+    "clear_definitions": ["terms defined in the article that AI search can cite"]
   }
 }
 
@@ -241,6 +280,6 @@ Return ONLY the JSON object, no markdown fences or explanation.`;
 
 export const SYSTEM_PROMPTS = {
   briefGeneration: "You are a strategic content intelligence analyst. You analyze competitive landscapes and generate data-driven content briefs. Always return valid JSON.",
-  contentGeneration: "You are an expert content writer who creates long-form, magazine-quality articles. You write in flowing, analytical paragraphs — not bullet point lists. Your content reads like a well-crafted editorial with substantive analysis, specific examples, and authoritative voice. Every article must include Key Takeaways at the top and an FAQ section at the bottom. Always return valid JSON.",
+  contentGeneration: "You are an expert content strategist who writes like a senior consultant — analytical, specific, and authoritative. Your articles use flowing paragraphs with concrete data, named frameworks, comparison tables, and real-world case studies. You never write bullet-point listicles. Every article includes Key Takeaways at the top and FAQ at the bottom. You define technical terms on first use and cite authoritative sources throughout. Always return valid JSON.",
   qualityScoring: "You are a content quality analyst who provides objective, consistent scoring of content across multiple dimensions. Always return valid JSON with scores from 0-100.",
 };
