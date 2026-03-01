@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +14,7 @@ interface ContentEditorProps {
 
 export function ContentEditor({ content }: ContentEditorProps) {
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<"formatted" | "markdown">("formatted");
 
   const handleCopy = async () => {
     if (content.content) {
@@ -38,6 +41,24 @@ export function ContentEditor({ content }: ContentEditorProps) {
             {content.ai_model_used && (
               <Badge variant="secondary">{content.ai_model_used}</Badge>
             )}
+            <div className="flex border rounded-md overflow-hidden">
+              <Button
+                size="sm"
+                variant={viewMode === "formatted" ? "default" : "ghost"}
+                className="rounded-none border-0 h-8 px-3"
+                onClick={() => setViewMode("formatted")}
+              >
+                Formatted
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === "markdown" ? "default" : "ghost"}
+                className="rounded-none border-0 h-8 px-3"
+                onClick={() => setViewMode("markdown")}
+              >
+                Markdown
+              </Button>
+            </div>
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? "Copied!" : "Copy"}
             </Button>
@@ -51,11 +72,17 @@ export function ContentEditor({ content }: ContentEditorProps) {
             <p className="text-sm text-muted-foreground">{content.excerpt}</p>
           </div>
         )}
-        <div className="prose prose-sm max-w-none dark:prose-invert">
+        {viewMode === "formatted" ? (
+          <div className="prose prose-sm max-w-none dark:prose-invert p-4 rounded-md border max-h-[600px] overflow-y-auto">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {content.content || "No content generated yet."}
+            </ReactMarkdown>
+          </div>
+        ) : (
           <div className="whitespace-pre-wrap font-mono text-sm bg-muted/50 p-4 rounded-md max-h-[600px] overflow-y-auto">
             {content.content || "No content generated yet."}
           </div>
-        </div>
+        )}
         {content.generation_time_seconds && (
           <p className="text-xs text-muted-foreground mt-3">
             Generated in {Number(content.generation_time_seconds).toFixed(1)}s
