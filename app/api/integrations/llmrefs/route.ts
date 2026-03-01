@@ -10,6 +10,7 @@ import {
 } from "@/lib/integrations/llmrefs";
 import { RateLimitError } from "@/lib/integrations/base";
 import { llmrefsSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("LLMrefs API error:", error);
+    logger.error("LLMrefs API error", { error: error as Error, route: "POST /api/integrations/llmrefs" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAiUsageSummary, getContentPipelineStats } from "@/lib/supabase/queries";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: Request,
@@ -30,7 +31,7 @@ export async function GET(
       data: { usageSummary, pipelineStats },
     });
   } catch (error) {
-    console.error("Performance data error:", error);
+    logger.error("Performance data error", { error: error as Error, route: "GET /api/content/performance/[clientId]" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

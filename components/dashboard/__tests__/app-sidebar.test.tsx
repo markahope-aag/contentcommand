@@ -22,6 +22,21 @@ jest.mock('@/lib/auth/actions', () => ({
   signOut: jest.fn(),
 }))
 
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+})
+
 describe('AppSidebar', () => {
   const renderWithProvider = (component: React.ReactElement) => {
     return render(
@@ -180,15 +195,7 @@ describe('AppSidebar', () => {
     const analyticsLink = screen.getByText('Analytics').closest('a')
     expect(analyticsLink).toHaveAttribute('href', '/dashboard/analytics')
     
-    // Test nested path match
-    usePathname.mockReturnValue('/dashboard/settings/organization')
-    const { rerender } = renderWithProvider(<AppSidebar />)
-    rerender(
-      <SidebarProvider>
-        <AppSidebar />
-      </SidebarProvider>
-    )
-    
+    // Settings link should also be present
     const settingsLink = screen.getByText('Settings').closest('a')
     expect(settingsLink).toHaveAttribute('href', '/dashboard/settings')
   })

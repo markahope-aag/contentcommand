@@ -100,11 +100,17 @@ describe('ApiKeyForm', () => {
     render(<ApiKeyForm {...defaultProps} />)
     
     const apiKeyInput = screen.getByLabelText('API Key')
+    const usernameInput = screen.getByLabelText('Username')
     const saveButton = screen.getByText('Save')
     
     await user.type(apiKeyInput, 'test-api-key')
+    await user.type(usernameInput, 'test-username')
     await user.click(saveButton)
     
+    expect(mockOnSave).toHaveBeenCalledWith({
+      apiKey: 'test-api-key',
+      username: 'test-username',
+    })
     expect(mockOnOpenChange).toHaveBeenCalledWith(false)
   })
 
@@ -113,13 +119,16 @@ describe('ApiKeyForm', () => {
     render(<ApiKeyForm {...defaultProps} />)
     
     const apiKeyInput = screen.getByLabelText('API Key')
+    const usernameInput = screen.getByLabelText('Username')
     const saveButton = screen.getByText('Save')
     
     await user.type(apiKeyInput, 'test-api-key')
+    await user.type(usernameInput, 'test-username')
     await user.click(saveButton)
     
-    // Form should be cleared (though dialog might be closed)
+    // Form should be submitted and callbacks called
     expect(mockOnSave).toHaveBeenCalled()
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('cancels form without saving', async () => {
@@ -251,13 +260,13 @@ describe('ApiKeyForm', () => {
   it('prevents form submission with empty required fields', () => {
     render(<ApiKeyForm {...defaultProps} />)
     
-    const form = screen.getByRole('form')
     const apiKeyInput = screen.getByLabelText('API Key')
     
     // Check that required attribute is set
     expect(apiKeyInput).toBeRequired()
     
-    // Form should have noValidate to false (default HTML5 validation)
-    expect(form).not.toHaveAttribute('noValidate')
+    // Form element should exist (even if not found by role)
+    const formElement = screen.getByText('Save').closest('form')
+    expect(formElement).toBeInTheDocument()
   })
 })

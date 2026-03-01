@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOrgSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
     if (error) throw error;
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("List organizations error:", error);
+    logger.error("List organizations error", { error: error as Error, route: "GET /api/organizations" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     return NextResponse.json({ data: { id: data } }, { status: 201 });
   } catch (error) {
-    console.error("Create organization error:", error);
+    logger.error("Create organization error", { error: error as Error, route: "POST /api/organizations" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

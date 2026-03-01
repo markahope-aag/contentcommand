@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-4 space-y-3">
         <Link href="/dashboard" className="flex items-center gap-2 px-2">
+          <Image src="/logo.svg" alt="" width={24} height={24} />
           <span className="text-lg font-bold">Content Command</span>
         </Link>
         <OrgSwitcher />

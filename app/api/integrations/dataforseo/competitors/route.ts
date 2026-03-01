@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dataForSEO } from "@/lib/integrations/dataforseo";
 import { RateLimitError } from "@/lib/integrations/base";
 import { dataforseoSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("DataForSEO API error:", error);
+    logger.error("DataForSEO API error", { error: error as Error, route: "POST /api/integrations/dataforseo/competitors" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

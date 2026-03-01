@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env";
 import { dataForSEO } from "@/lib/integrations/dataforseo";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
           for (const r of compResults) {
             if (r.status === "rejected") {
-              console.error(`Keyword analysis failed for client ${client.name}:`, r.reason);
+              logger.error("Keyword analysis failed", { error: r.reason instanceof Error ? r.reason : undefined, clientName: client.name, route: "POST /api/cron/daily-competitor-analysis" });
             }
           }
         }
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
         results.push({ clientId: client.id, success: false, error: message });
-        console.error(`Competitor analysis failed for ${client.name}:`, error);
+        logger.error("Competitor analysis failed", { error: error as Error, clientName: client.name, route: "POST /api/cron/daily-competitor-analysis" });
       }
     }
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error("Daily competitor analysis cron error:", error);
+    logger.error("Daily competitor analysis cron error", { error: error as Error, route: "POST /api/cron/daily-competitor-analysis" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { transitionBriefStatus } from "@/lib/content/workflow";
+import { logger } from "@/lib/logger";
 
 export async function PUT(
   _request: Request,
@@ -36,7 +37,7 @@ export async function PUT(
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
-    console.error("Approve brief error:", error);
+    logger.error("Approve brief error", { error: error as Error, route: "PUT /api/content/briefs/[id]/approve" });
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

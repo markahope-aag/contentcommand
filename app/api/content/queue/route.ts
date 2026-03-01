@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("Content queue error:", error);
+    logger.error("Content queue error", { error: error as Error, route: "GET /api/content/queue" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

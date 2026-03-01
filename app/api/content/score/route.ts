@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { scoreContent } from "@/lib/ai/content-engine";
 import { RateLimitError } from "@/lib/integrations/base";
 import { contentScoreSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
-    console.error("Content scoring error:", error);
+    logger.error("Content scoring error", { error: error as Error, route: "POST /api/content/score" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

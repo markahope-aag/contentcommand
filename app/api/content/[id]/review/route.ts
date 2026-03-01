@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { submitReview } from "@/lib/content/workflow";
 import { contentReviewSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function PUT(
   request: Request,
@@ -51,7 +52,7 @@ export async function PUT(
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
-    console.error("Review submission error:", error);
+    logger.error("Review submission error", { error: error as Error, route: "PUT /api/content/[id]/review" });
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

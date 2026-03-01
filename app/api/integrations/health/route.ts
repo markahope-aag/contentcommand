@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getIntegrationHealth } from "@/lib/supabase/queries";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
     const health = await getIntegrationHealth();
     return NextResponse.json({ data: health });
   } catch (error) {
-    console.error("Health check error:", error);
+    logger.error("Health check error", { error: error as Error, route: "GET /api/integrations/health" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

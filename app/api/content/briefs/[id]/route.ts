@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { briefUpdateSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: Request,
@@ -27,7 +28,7 @@ export async function GET(
 
     return NextResponse.json({ data: brief });
   } catch (error) {
-    console.error("Get brief error:", error);
+    logger.error("Get brief error", { error: error as Error, route: "GET /api/content/briefs/[id]" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -58,7 +59,7 @@ export async function PUT(
     if (error) throw error;
     return NextResponse.json({ data: brief });
   } catch (error) {
-    console.error("Update brief error:", error);
+    logger.error("Update brief error", { error: error as Error, route: "PUT /api/content/briefs/[id]" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -83,7 +84,7 @@ export async function DELETE(
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete brief error:", error);
+    logger.error("Delete brief error", { error: error as Error, route: "DELETE /api/content/briefs/[id]" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

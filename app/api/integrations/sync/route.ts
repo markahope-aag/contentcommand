@@ -6,6 +6,7 @@ import { frase } from "@/lib/integrations/frase";
 import { getKeywords as getLlmrefsKeywords } from "@/lib/integrations/llmrefs";
 import { RateLimitError } from "@/lib/integrations/base";
 import { syncSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("Sync error:", error);
+    logger.error("Sync error", { error: error as Error, route: "POST /api/integrations/sync" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

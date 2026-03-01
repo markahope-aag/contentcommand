@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateBrief } from "@/lib/ai/content-engine";
 import { RateLimitError } from "@/lib/integrations/base";
 import { briefGenerateSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
-    console.error("Brief generation error:", error);
+    logger.error("Brief generation error", { error: error as Error, route: "POST /api/content/briefs/generate" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

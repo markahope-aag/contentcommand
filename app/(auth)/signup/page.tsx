@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -54,6 +55,7 @@ export default function SignupPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <Image src="/logo-full.svg" alt="Content Command" width={160} height={40} className="mx-auto mb-2" />
             <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
             <CardDescription>
               We&apos;ve sent you a confirmation link. Please check your email to verify your account.
@@ -73,6 +75,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <Image src="/logo-full.svg" alt="Content Command" width={160} height={40} className="mx-auto mb-2" />
           <CardTitle className="text-2xl font-bold">Content Command</CardTitle>
           <CardDescription>Create your account</CardDescription>
         </CardHeader>

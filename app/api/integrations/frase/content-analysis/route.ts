@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { frase } from "@/lib/integrations/frase";
 import { RateLimitError } from "@/lib/integrations/base";
 import { fraseSchema, validateBody } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("Frase API error:", error);
+    logger.error("Frase API error", { error: error as Error, route: "POST /api/integrations/frase/content-analysis" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

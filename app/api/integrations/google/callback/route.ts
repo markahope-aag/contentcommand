@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { googleAuth } from "@/lib/integrations/google";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       )
     );
   } catch (error) {
-    console.error("Google OAuth callback error:", error);
+    logger.error("Google OAuth callback error", { error: error as Error, route: "GET /api/integrations/google/callback" });
     return NextResponse.redirect(
       new URL("/dashboard/integrations?error=oauth-failed", request.url)
     );

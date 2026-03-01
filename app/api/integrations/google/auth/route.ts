@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { googleAuth } from "@/lib/integrations/google";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const authUrl = googleAuth.getAuthUrl(clientId);
     return NextResponse.json({ url: authUrl });
   } catch (error) {
-    console.error("Google auth error:", error);
+    logger.error("Google auth error", { error: error as Error, route: "GET /api/integrations/google/auth" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

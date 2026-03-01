@@ -47,7 +47,7 @@ export async function transitionBriefStatus(
     briefStatus = brief.status;
   }
 
-  if (!canTransition(briefStatus, newStatus)) {
+  if (!canTransition(briefStatus!, newStatus)) {
     throw new Error(
       `Invalid transition: ${briefStatus} → ${newStatus}`
     );
