@@ -1,0 +1,1188 @@
+openapi: 3.0.3
+info:
+  title: Content Command API
+  description: |
+    AI-powered content creation and competitive intelligence platform API.
+    
+    ## Authentication
+    All endpoints require JWT authentication via the Authorization header:
+    `Authorization: Bearer <your-jwt-token>`
+    
+    ## Rate Limiting
+    - Authentication: 10 requests/minute
+    - Content Generation: 5 requests/minute  
+    - Data Retrieval: 100 requests/minute
+    - Integrations: 20 requests/minute
+    
+    ## Error Handling
+    All errors follow a consistent format with appropriate HTTP status codes.
+    
+  version: 1.0.0
+  contact:
+    name: Content Command Support
+    email: support@contentcommand.com
+    url: https://docs.contentcommand.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://contentcommand.vercel.app/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Organizations
+  /organizations:
+    get:
+      summary: List organizations
+      description: Get all organizations the authenticated user has access to
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Organization'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    post:
+      summary: Create organization
+      description: Create a new organization and assign the creator as owner
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name:
+                  type: string
+                  description: Organization name
+                  example: "Acme Marketing Agency"
+                slug:
+                  type: string
+                  description: URL-friendly identifier
+                  pattern: '^[a-z0-9-]+$'
+                  example: "acme-marketing"
+      responses:
+        '201':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Organization slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /organizations/{id}:
+    get:
+      summary: Get organization
+      description: Get a specific organization by ID
+      tags: [Organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    
+    put:
+      summary: Update organization
+      description: Update organization details (requires admin or owner role)
+      tags: [Organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Updated Organization Name"
+                slug:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                  example: "updated-org-slug"
+      responses:
+        '200':
+          description: Organization updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /organizations/{id}/members:
+    get:
+      summary: List organization members
+      description: Get all members of an organization
+      tags: [Organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of organization members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationMember'
+    
+    post:
+      summary: Add organization member
+      description: Add a new member to the organization (requires admin or owner role)
+      tags: [Organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, role]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  description: User ID to add as member
+                role:
+                  type: string
+                  enum: [owner, admin, member]
+                  description: Role to assign to the user
+      responses:
+        '201':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrganizationMember'
+
+  # Clients
+  /clients:
+    get:
+      summary: List clients
+      description: Get all clients accessible to the authenticated user
+      tags: [Clients]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - name: orgId
+          in: query
+          description: Filter by organization ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    
+    post:
+      summary: Create client
+      description: Create a new client
+      tags: [Clients]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Client created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+
+  /clients/{id}:
+    get:
+      summary: Get client
+      description: Get a specific client by ID
+      tags: [Clients]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Client details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+    
+    put:
+      summary: Update client
+      description: Update client details
+      tags: [Clients]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: Client updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+    
+    delete:
+      summary: Delete client
+      description: Delete a client (requires owner role)
+      tags: [Clients]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Client deleted successfully
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # Content Briefs
+  /content/briefs:
+    get:
+      summary: List content briefs
+      description: Get all content briefs accessible to the authenticated user
+      tags: [Content]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: clientId
+          in: query
+          description: Filter by client ID
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [draft, approved, generating, generated, reviewing, revision_requested, published]
+        - name: priorityLevel
+          in: query
+          description: Filter by priority level
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+      responses:
+        '200':
+          description: List of content briefs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContentBrief'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    
+    post:
+      summary: Create content brief
+      description: Create a new content brief
+      tags: [Content]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentBriefCreate'
+      responses:
+        '201':
+          description: Content brief created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentBrief'
+
+  /content/briefs/{id}:
+    get:
+      summary: Get content brief
+      description: Get a specific content brief by ID
+      tags: [Content]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Content brief details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentBrief'
+    
+    put:
+      summary: Update content brief
+      description: Update content brief details
+      tags: [Content]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentBriefUpdate'
+      responses:
+        '200':
+          description: Content brief updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentBrief'
+
+  /content/briefs/{id}/approve:
+    post:
+      summary: Approve content brief
+      description: Approve a content brief for content generation
+      tags: [Content]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Content brief approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentBrief'
+
+  # Content Generation
+  /content/generate:
+    post:
+      summary: Generate content
+      description: Generate content from an approved brief using AI
+      tags: [Content]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [briefId]
+              properties:
+                briefId:
+                  type: string
+                  format: uuid
+                  description: ID of the approved content brief
+                model:
+                  type: string
+                  enum: [gpt-4, gpt-3.5-turbo, claude-3-opus, claude-3-sonnet]
+                  default: gpt-4
+                  description: AI model to use for generation
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                  default: 0.7
+                  description: Creativity level (0 = deterministic, 2 = very creative)
+                maxTokens:
+                  type: integer
+                  minimum: 100
+                  maximum: 4000
+                  default: 2000
+                  description: Maximum tokens to generate
+      responses:
+        '201':
+          description: Content generation started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GeneratedContent'
+        '400':
+          description: Invalid brief or brief not approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /content/queue:
+    get:
+      summary: Get content queue
+      description: Get all generated content with their briefs
+      tags: [Content]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: clientId
+          in: query
+          description: Filter by client ID
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by content status
+          schema:
+            type: string
+            enum: [draft, generated, reviewing, revision_requested, approved, published]
+      responses:
+        '200':
+          description: Content queue with briefs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/GeneratedContent'
+                        - type: object
+                          properties:
+                            content_briefs:
+                              $ref: '#/components/schemas/ContentBrief'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /content/{id}/review:
+    put:
+      summary: Review content
+      description: Submit a review for generated content
+      tags: [Content]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, request_revision]
+                  description: Review action to take
+                reviewerNotes:
+                  type: string
+                  description: Notes from the reviewer
+                revisionRequests:
+                  type: array
+                  items:
+                    type: string
+                  description: Specific revision requests (required if action is request_revision)
+      responses:
+        '200':
+          description: Review submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GeneratedContent'
+
+  # Integrations
+  /integrations/health:
+    get:
+      summary: Get integration health
+      description: Get health status of all external integrations
+      tags: [Integrations]
+      responses:
+        '200':
+          description: Integration health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationHealth'
+
+  /integrations/google/auth:
+    post:
+      summary: Get Google OAuth URL
+      description: Get Google OAuth authorization URL for a client
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId]
+              properties:
+                clientId:
+                  type: string
+                  format: uuid
+                  description: Client ID to authorize Google access for
+      responses:
+        '200':
+          description: Google OAuth authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: Google OAuth authorization URL
+
+  /integrations/sync:
+    post:
+      summary: Sync integrations
+      description: Trigger synchronization of all or specific integrations
+      tags: [Integrations]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                  enum: [dataforseo, frase, google, llmrefs]
+                  description: Specific provider to sync (optional, syncs all if not provided)
+                clientId:
+                  type: string
+                  format: uuid
+                  description: Specific client to sync (optional)
+      responses:
+        '200':
+          description: Sync initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Sync initiated for all integrations"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Supabase Auth
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Page number (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    
+    PageSize:
+      name: pageSize
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    
+    Search:
+      name: search
+      in: query
+      description: Search term for full-text search
+      schema:
+        type: string
+
+  schemas:
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Acme Marketing Agency"
+        slug:
+          type: string
+          example: "acme-marketing"
+        created_at:
+          type: string
+          format: date-time
+      required: [id, name, slug, created_at]
+
+    OrganizationMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+        created_at:
+          type: string
+          format: date-time
+      required: [id, org_id, user_id, role, created_at]
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Tech Startup Inc"
+        domain:
+          type: string
+          example: "techstartup.com"
+        industry:
+          type: string
+          nullable: true
+          example: "Technology"
+        target_keywords:
+          type: array
+          items:
+            type: string
+          nullable: true
+          example: ["saas", "startup", "technology"]
+        brand_voice:
+          type: object
+          nullable: true
+          example: {"tone": "professional", "style": "conversational"}
+        org_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, name, domain, created_at]
+
+    ClientCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Tech Startup Inc"
+        domain:
+          type: string
+          example: "techstartup.com"
+        industry:
+          type: string
+          example: "Technology"
+        target_keywords:
+          type: array
+          items:
+            type: string
+          example: ["saas", "startup", "technology"]
+        brand_voice:
+          type: object
+          example: {"tone": "professional", "style": "conversational"}
+        org_id:
+          type: string
+          format: uuid
+      required: [name, domain]
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        domain:
+          type: string
+        industry:
+          type: string
+        target_keywords:
+          type: array
+          items:
+            type: string
+        brand_voice:
+          type: object
+
+    ContentBrief:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "SEO Best Practices for 2024"
+        target_keyword:
+          type: string
+          example: "seo best practices"
+        competitive_gap:
+          type: string
+          nullable: true
+        unique_angle:
+          type: string
+          nullable: true
+        ai_citation_opportunity:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, approved, generating, generated, reviewing, revision_requested, published]
+          default: draft
+        content_requirements:
+          type: object
+          nullable: true
+        target_audience:
+          type: string
+        content_type:
+          type: string
+          enum: [blog_post, article, guide, tutorial, case_study, whitepaper]
+        target_word_count:
+          type: integer
+          minimum: 100
+        priority_level:
+          type: string
+          enum: [low, medium, high, urgent]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        approved_by:
+          type: string
+          format: uuid
+          nullable: true
+      required: [id, client_id, title, target_keyword, status, target_audience, content_type, target_word_count, priority_level, created_at]
+
+    ContentBriefCreate:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "SEO Best Practices for 2024"
+        target_keyword:
+          type: string
+          example: "seo best practices"
+        target_audience:
+          type: string
+          example: "Digital marketers and SEO professionals"
+        content_type:
+          type: string
+          enum: [blog_post, article, guide, tutorial, case_study, whitepaper]
+        target_word_count:
+          type: integer
+          minimum: 100
+          example: 2000
+        priority_level:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        content_requirements:
+          type: object
+          example: {"include_examples": true, "technical_depth": "intermediate"}
+      required: [client_id, title, target_keyword, target_audience, content_type, target_word_count]
+
+    ContentBriefUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        target_keyword:
+          type: string
+        competitive_gap:
+          type: string
+        unique_angle:
+          type: string
+        ai_citation_opportunity:
+          type: string
+        target_audience:
+          type: string
+        content_type:
+          type: string
+          enum: [blog_post, article, guide, tutorial, case_study, whitepaper]
+        target_word_count:
+          type: integer
+        priority_level:
+          type: string
+          enum: [low, medium, high, urgent]
+        content_requirements:
+          type: object
+
+    GeneratedContent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        brief_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        meta_description:
+          type: string
+          nullable: true
+        excerpt:
+          type: string
+          nullable: true
+        quality_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        word_count:
+          type: integer
+        status:
+          type: string
+          enum: [draft, generated, reviewing, revision_requested, approved, published]
+        ai_model_used:
+          type: string
+          example: "gpt-4"
+        generation_time_seconds:
+          type: integer
+          nullable: true
+        seo_optimizations:
+          type: object
+          nullable: true
+        ai_citations_ready:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        reviewer_notes:
+          type: string
+          nullable: true
+        revision_requests:
+          type: array
+          items:
+            type: string
+          nullable: true
+      required: [id, brief_id, client_id, title, content, word_count, status, created_at]
+
+    IntegrationHealth:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [dataforseo, frase, google, llmrefs, openai, anthropic]
+        status:
+          type: string
+          enum: [healthy, degraded, down, unknown]
+        last_success:
+          type: string
+          format: date-time
+          nullable: true
+        last_failure:
+          type: string
+          format: date-time
+          nullable: true
+        error_count:
+          type: integer
+          minimum: 0
+        avg_response_ms:
+          type: integer
+          minimum: 0
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, provider, status, error_count, updated_at]
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+      required: [page, pageSize, total, totalPages, hasNext, hasPrevious]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+        details:
+          type: object
+          description: Additional error context
+      required: [error, message]
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "ValidationError"
+            message: "Invalid request data"
+            code: "VALIDATION_FAILED"
+            details:
+              fields:
+                name: "Name is required"
+                email: "Invalid email format"
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Authentication required"
+            code: "AUTH_REQUIRED"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "Insufficient permissions"
+            code: "PERMISSION_DENIED"
+
+    NotFound:
+      description: Not found - resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NotFound"
+            message: "Resource not found"
+            code: "RESOURCE_NOT_FOUND"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "InternalServerError"
+            message: "An unexpected error occurred"
+            code: "INTERNAL_ERROR"
+
+tags:
+  - name: Organizations
+    description: Multi-tenant organization management
+  - name: Clients
+    description: Client and competitor management
+  - name: Content
+    description: Content creation and management
+  - name: Integrations
+    description: External API integrations and health monitoring

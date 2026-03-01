@@ -100,6 +100,20 @@ jest.mock('@/lib/integrations/health', () => ({
   checkIntegrationHealth: jest.fn(),
 }))
 
+jest.mock('@/lib/cache', () => ({
+  withCache: jest.fn((key: string, fn: () => Promise<unknown>) => fn()),
+  invalidateCache: jest.fn(),
+}))
+
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
+
 // Mock the rate limiting and base classes
 jest.mock('@/lib/integrations/base', () => ({
   RateLimitError: class RateLimitError extends Error {
@@ -690,9 +704,13 @@ describe('API Endpoints Unit Tests', () => {
 
       await POST(request)
 
-      expect(console.error).toHaveBeenCalledWith(
-        'Brief generation error:',
-        expect.any(Error)
+      const { logger } = require('@/lib/logger')
+      expect(logger.error).toHaveBeenCalledWith(
+        'Brief generation error',
+        expect.objectContaining({
+          error: expect.any(Error),
+          route: 'POST /api/content/briefs/generate',
+        })
       )
       expect(NextResponse.json).toHaveBeenCalledWith(
         { error: 'Internal server error' },

@@ -64,9 +64,11 @@ describe('OrgSwitcher', () => {
   })
 
   it('shows loading state initially', () => {
-    render(<OrgSwitcher />)
-    
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument()
+    const { container } = render(<OrgSwitcher />)
+
+    // Skeleton component renders with animate-pulse class
+    const skeleton = container.querySelector('.animate-pulse')
+    expect(skeleton).toBeInTheDocument()
   })
 
   it('shows create organization button when no organizations exist', async () => {
@@ -278,17 +280,19 @@ describe('OrgSwitcher', () => {
     })
   })
 
-  it('shows select org placeholder when no current org', async () => {
-    mockSupabaseClient.order.mockResolvedValue({ data: mockOrganizations, error: null })
-    
-    // Mock scenario where no org is selected
-    const orgsWithoutMatch = mockOrganizations.map(org => ({ ...org, id: 'different-id' }))
-    mockSupabaseClient.order.mockResolvedValue({ data: orgsWithoutMatch, error: null })
-    
+  it('shows first org name when no org matches saved/URL selection', async () => {
+    // Even though no org matches the saved/URL id, the component falls back to data[0]
+    const orgsWithDifferentIds = mockOrganizations.map((org, i) => ({
+      ...org,
+      id: `different-id-${i}`,
+    }))
+    mockSupabaseClient.order.mockResolvedValue({ data: orgsWithDifferentIds, error: null })
+
     render(<OrgSwitcher />)
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Select org')).toBeInTheDocument()
+      // Falls back to first org since no targetId match
+      expect(screen.getByText('Test Organization 1')).toBeInTheDocument()
     })
   })
 })

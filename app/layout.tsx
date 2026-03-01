@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/toaster";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { SkipLink } from "@/components/ui/skip-link";
 import { Suspense } from "react";
 import "./globals.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <SkipLink />
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>

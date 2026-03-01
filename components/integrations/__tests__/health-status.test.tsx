@@ -4,6 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import { axe } from 'jest-axe'
 import { HealthStatus } from '../health-status'
 import type { IntegrationHealth } from '@/types/database'
 
@@ -232,6 +233,18 @@ describe('HealthStatus', () => {
     expect(screen.queryByText('Frase')).not.toBeInTheDocument()
     expect(screen.queryByText('Google')).not.toBeInTheDocument()
     expect(screen.queryByText('LLMrefs')).not.toBeInTheDocument()
+  })
+
+  it('has no accessibility violations', async () => {
+    const { container } = render(<HealthStatus healthData={mockHealthData} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+
+  it('has no accessibility violations with empty state', async () => {
+    const { container } = render(<HealthStatus healthData={[]} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
   })
 
   it('maintains consistent styling across all status types', () => {

@@ -4,6 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import { axe } from 'jest-axe'
 import { AiUsageSummary } from '../ai-usage-summary'
 
 describe('AiUsageSummary', () => {
@@ -225,7 +226,19 @@ describe('AiUsageSummary', () => {
     expect(providerSection).toHaveClass('space-y-1')
   })
 
-  it('handles very small token counts', () => {
+  it('has no accessibility violations', async () => {
+    const { container } = render(<AiUsageSummary summary={mockUsageSummary} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+
+  it('has no accessibility violations with empty state', async () => {
+    const { container } = render(<AiUsageSummary summary={null} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+
+  it('has very small token counts', () => {
     const summaryWithTinyTokens = {
       ...mockUsageSummary,
       totalInputTokens: 1,

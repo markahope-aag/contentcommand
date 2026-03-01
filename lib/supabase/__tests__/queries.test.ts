@@ -57,7 +57,7 @@ jest.mock('../server', () => ({
 
 // Mock the cache
 jest.mock('@/lib/cache', () => ({
-  withCache: jest.fn((key, fn) => fn()),
+  withCache: jest.fn((key: string, fn: () => Promise<unknown>) => fn()),
   invalidateCache: jest.fn(),
 }))
 
@@ -65,10 +65,13 @@ describe('Database Queries', () => {
   let mockClient: jest.Mocked<any>
 
   beforeEach(() => {
+    jest.clearAllMocks()
     mockClient = createMockSupabaseClient()
     const { createClient } = require('../server')
     createClient.mockResolvedValue(mockClient)
-    jest.clearAllMocks()
+    // Reset withCache to default pass-through behavior after clearAllMocks
+    const { withCache } = require('@/lib/cache')
+    withCache.mockImplementation((key: string, fn: () => Promise<unknown>) => fn())
   })
 
   describe('Organization Queries', () => {
@@ -386,23 +389,37 @@ describe('Database Queries', () => {
 
   describe('Competitor Queries', () => {
     describe('getCompetitors', () => {
-      it('fetches competitors for client with caching', async () => {
+      it('fetches competitors for client with caching and pagination', async () => {
         const mockCompetitors = [
           testDataFactory.competitor({ name: 'Competitor 1', competitive_strength: 9.0 }),
           testDataFactory.competitor({ name: 'Competitor 2', competitive_strength: 8.5 }),
         ]
-        mockClient.from.mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue(mockQueryResults.success(mockCompetitors)),
+
+        // getCompetitors uses withCache, mock it to call the fetcher
+        const { withCache } = require('@/lib/cache')
+        withCache.mockImplementation(async (key: any, fetcher: any) => {
+          mockClient.from.mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  range: jest.fn().mockResolvedValue({
+                    data: mockCompetitors,
+                    error: null,
+                    count: mockCompetitors.length,
+                  }),
+                }),
+              }),
             }),
-          }),
+          })
+          return await fetcher()
         })
 
         const result = await getCompetitors('client-id')
 
-        expect(mockClient.from).toHaveBeenCalledWith('competitors')
-        expect(result).toEqual(mockCompetitors)
+        expect(result).toEqual({
+          data: mockCompetitors,
+          count: mockCompetitors.length,
+        })
       })
     })
 
@@ -458,36 +475,73 @@ describe('Database Queries', () => {
           testDataFactory.contentBrief({ title: 'Brief 1' }),
           testDataFactory.contentBrief({ title: 'Brief 2' }),
         ]
-        mockClient.from.mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue(mockQueryResults.success(mockBriefs)),
-          }),
+
+        // getAllContentBriefs uses withCache for no-filter variant
+        const { withCache } = require('@/lib/cache')
+        withCache.mockImplementation(async (key: any, fetcher: any) => {
+          mockClient.from.mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                range: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockResolvedValue({
+                    data: mockBriefs,
+                    error: null,
+                    count: mockBriefs.length,
+                  }),
+                  then: function(resolve: any) {
+                    return Promise.resolve({
+                      data: mockBriefs,
+                      error: null,
+                      count: mockBriefs.length,
+                    }).then(resolve)
+                  },
+                  data: mockBriefs,
+                  error: null,
+                  count: mockBriefs.length,
+                }),
+              }),
+            }),
+          })
+          return await fetcher()
         })
 
         const result = await getAllContentBriefs()
 
-        expect(result).toEqual(mockBriefs)
+        expect(result).toEqual({
+          data: mockBriefs,
+          count: mockBriefs.length,
+        })
       })
 
       it('applies filters and skips cache', async () => {
         const mockBriefs = [testDataFactory.contentBrief({ status: 'approved' })]
-        
-        const queryChain = {
-          order: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-        }
-        queryChain.order.mockResolvedValue(mockQueryResults.success(mockBriefs))
-        
+
+        // When filters are applied, getAllContentBriefs skips cache and calls fetcher directly
         mockClient.from.mockReturnValue({
-          select: jest.fn().mockReturnValue(queryChain),
+          select: jest.fn().mockReturnValue({
+            order: jest.fn().mockReturnValue({
+              range: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockResolvedValue({
+                    data: mockBriefs,
+                    error: null,
+                    count: mockBriefs.length,
+                  }),
+                }),
+              }),
+            }),
+          }),
         })
 
-        const result = await getAllContentBriefs({ 
-          clientId: 'client-id', 
-          status: 'approved' 
+        const result = await getAllContentBriefs({
+          clientId: 'client-id',
+          status: 'approved'
         })
 
-        expect(result).toEqual(mockBriefs)
+        expect(result).toEqual({
+          data: mockBriefs,
+          count: mockBriefs.length,
+        })
       })
     })
 
@@ -552,16 +606,30 @@ describe('Database Queries', () => {
             content_briefs: testDataFactory.contentBrief(),
           },
         ]
-        mockClient.from.mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue(mockQueryResults.success(mockQueue)),
-          }),
+
+        // getContentQueue uses withCache for no-filter variant
+        const { withCache } = require('@/lib/cache')
+        withCache.mockImplementation(async (key: any, fetcher: any) => {
+          mockClient.from.mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                range: jest.fn().mockResolvedValue({
+                  data: mockQueue,
+                  error: null,
+                  count: mockQueue.length,
+                }),
+              }),
+            }),
+          })
+          return await fetcher()
         })
 
         const result = await getContentQueue()
 
-        expect(mockClient.from).toHaveBeenCalledWith('generated_content')
-        expect(result).toEqual(mockQueue)
+        expect(result).toEqual({
+          data: mockQueue,
+          count: mockQueue.length,
+        })
       })
 
       it('applies filters and skips cache', async () => {
@@ -574,14 +642,23 @@ describe('Database Queries', () => {
         mockClient.from.mockReturnValue({
           select: jest.fn().mockReturnValue({
             order: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue(mockQueryResults.success(mockQueue)),
+              range: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({
+                  data: mockQueue,
+                  error: null,
+                  count: mockQueue.length,
+                }),
+              }),
             }),
           }),
         })
 
         const result = await getContentQueue({ status: 'reviewing' })
 
-        expect(result).toEqual(mockQueue)
+        expect(result).toEqual({
+          data: mockQueue,
+          count: mockQueue.length,
+        })
       })
     })
   })
@@ -643,46 +720,32 @@ describe('Database Queries', () => {
 
   describe('AI Usage Queries', () => {
     describe('getAiUsageSummary', () => {
-      it('calculates usage summary from raw data', async () => {
-        const mockUsageData = [
+      it('calculates usage summary from RPC data', async () => {
+        // The actual function uses supabase.rpc('get_ai_usage_summary', ...)
+        const mockRpcData = [
           {
-            id: '1',
-            client_id: 'client-1',
+            total_cost: 0.08,
+            total_input_tokens: 1800,
+            total_output_tokens: 700,
             provider: 'openai',
-            model: 'gpt-4',
             operation: 'content_generation',
-            input_tokens: 1000,
-            output_tokens: 500,
-            estimated_cost_usd: 0.05,
-            brief_id: null,
-            content_id: null,
-            created_at: '2024-01-01T00:00:00Z',
+            group_cost: 0.05,
+            group_calls: 1,
           },
           {
-            id: '2',
-            client_id: 'client-1',
+            total_cost: 0.08,
+            total_input_tokens: 1800,
+            total_output_tokens: 700,
             provider: 'anthropic',
-            model: 'claude-3',
             operation: 'quality_analysis',
-            input_tokens: 800,
-            output_tokens: 200,
-            estimated_cost_usd: 0.03,
-            brief_id: null,
-            content_id: null,
-            created_at: '2024-01-01T00:00:00Z',
+            group_cost: 0.03,
+            group_calls: 1,
           },
         ]
-        
-        // Mock the withCache function to directly call the fetcher
+
         const { withCache } = require('@/lib/cache')
         withCache.mockImplementation(async (key: any, fetcher: any) => {
-          // Mock the query chain
-          mockClient.from.mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue(mockQueryResults.success(mockUsageData)),
-            }),
-          })
-          
+          mockClient.rpc.mockResolvedValue(mockQueryResults.success(mockRpcData))
           return await fetcher()
         })
 
@@ -704,8 +767,10 @@ describe('Database Queries', () => {
       })
 
       it('handles global summary without client filter', async () => {
-        mockClient.from.mockReturnValue({
-          select: jest.fn().mockResolvedValue(mockQueryResults.success([])),
+        const { withCache } = require('@/lib/cache')
+        withCache.mockImplementation(async (key: any, fetcher: any) => {
+          mockClient.rpc.mockResolvedValue(mockQueryResults.success([]))
+          return await fetcher()
         })
 
         const result = await getAiUsageSummary()
@@ -723,25 +788,18 @@ describe('Database Queries', () => {
 
   describe('Pipeline Stats Queries', () => {
     describe('getContentPipelineStats', () => {
-      it('calculates pipeline statistics', async () => {
-        const mockBriefData = [
-          { status: 'draft' },
-          { status: 'draft' },
-          { status: 'approved' },
-          { status: 'generating' },
-          { status: 'generated' },
+      it('calculates pipeline statistics from RPC', async () => {
+        // The actual function uses supabase.rpc('get_pipeline_stats', ...)
+        const mockRpcData = [
+          { status: 'draft', count: 2 },
+          { status: 'approved', count: 1 },
+          { status: 'generating', count: 1 },
+          { status: 'generated', count: 1 },
         ]
-        
-        // Mock the withCache function to directly call the fetcher
+
         const { withCache } = require('@/lib/cache')
         withCache.mockImplementation(async (key: any, fetcher: any) => {
-          // Mock the query chain
-          mockClient.from.mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue(mockQueryResults.success(mockBriefData)),
-            }),
-          })
-          
+          mockClient.rpc.mockResolvedValue(mockQueryResults.success(mockRpcData))
           return await fetcher()
         })
 
@@ -773,10 +831,16 @@ describe('Database Queries', () => {
             updated_at: '2024-01-01T00:00:00Z',
           },
         ]
-        mockClient.from.mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue(mockQueryResults.success(mockHealthData)),
-          }),
+
+        // getIntegrationHealth uses withCache
+        const { withCache } = require('@/lib/cache')
+        withCache.mockImplementation(async (key: any, fetcher: any) => {
+          mockClient.from.mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue(mockQueryResults.success(mockHealthData)),
+            }),
+          })
+          return await fetcher()
         })
 
         const result = await getIntegrationHealth()

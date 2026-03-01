@@ -5,6 +5,7 @@
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
 import { ApiKeyForm } from '../api-key-form'
 
 describe('ApiKeyForm', () => {
@@ -244,6 +245,12 @@ describe('ApiKeyForm', () => {
     render(<ApiKeyForm {...longProviderProps} />)
     
     expect(screen.getByText('Configure Very Long Provider Name That Should Display Correctly')).toBeInTheDocument()
+  })
+
+  it('has no accessibility violations', async () => {
+    const { container } = render(<ApiKeyForm {...defaultProps} />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
   })
 
   it('handles form reset when dialog reopens', () => {

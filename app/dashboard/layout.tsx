@@ -17,7 +17,7 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <div className="flex items-center gap-2 border-b px-6 py-3">
           <SidebarTrigger />
         </div>

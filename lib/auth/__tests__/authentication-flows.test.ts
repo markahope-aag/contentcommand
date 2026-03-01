@@ -14,7 +14,7 @@ import {
 // Mock Next.js navigation
 const mockRedirect = jest.fn()
 jest.mock('next/navigation', () => ({
-  redirect: mockRedirect,
+  redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
 // Mock the Supabase client
@@ -26,10 +26,10 @@ describe('Authentication Flows', () => {
   let mockClient: jest.Mocked<any>
 
   beforeEach(() => {
+    jest.clearAllMocks()
     mockClient = createMockSupabaseClient()
     const { createClient } = require('@/lib/supabase/server')
     createClient.mockResolvedValue(mockClient)
-    jest.clearAllMocks()
   })
 
   describe('Sign Out Flow', () => {

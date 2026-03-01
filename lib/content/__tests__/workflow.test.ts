@@ -1,3 +1,11 @@
+// Mock dependencies that workflow.ts imports at module level
+jest.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: jest.fn(),
+}))
+jest.mock('@/lib/cache', () => ({
+  invalidateCache: jest.fn(),
+}))
+
 import { canTransition } from '../workflow'
 import type { BriefStatus } from '../workflow'
 
