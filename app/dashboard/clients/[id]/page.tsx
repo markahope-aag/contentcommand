@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CompetitorActions } from "@/components/clients/competitor-actions";
+import { CompetitorDeleteButton } from "@/components/clients/competitor-delete-button";
 
 export default async function ClientDetailPage({
   params,
@@ -68,9 +69,9 @@ export default async function ClientDetailPage({
             {client.industry && (
               <div>
                 <span className="text-sm text-muted-foreground">Industry</span>
-                <p>
+                <div>
                   <Badge variant="secondary">{client.industry}</Badge>
-                </p>
+                </div>
               </div>
             )}
             {keywords.length > 0 && (
@@ -139,6 +140,7 @@ export default async function ClientDetailPage({
                   <TableHead>Name</TableHead>
                   <TableHead>Domain</TableHead>
                   <TableHead>Strength</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,6 +150,9 @@ export default async function ClientDetailPage({
                     <TableCell>{comp.domain}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{comp.competitive_strength}/10</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <CompetitorDeleteButton competitorId={comp.id} clientId={id} />
                     </TableCell>
                   </TableRow>
                 ))}

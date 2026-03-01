@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { addOrgMemberSchema, validateBody } from "@/lib/validations";
 import { logger } from "@/lib/logger";
 
@@ -22,7 +23,20 @@ export async function GET(
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return NextResponse.json({ data });
+
+    // Resolve user emails via admin client
+    const admin = createAdminClient();
+    const enriched = await Promise.all(
+      (data ?? []).map(async (member) => {
+        const { data: userData } = await admin.auth.admin.getUserById(member.user_id);
+        return {
+          ...member,
+          email: userData?.user?.email ?? null,
+        };
+      })
+    );
+
+    return NextResponse.json({ data: enriched });
   } catch (error) {
     logger.error("List org members error", { error: error as Error, route: "GET /api/organizations/[id]/members" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

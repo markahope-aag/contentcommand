@@ -47,12 +47,13 @@ export function CompetitorActions({ clientId }: { clientId: string }) {
     if (dbError) {
       toast({ title: "Failed to add competitor", description: dbError.message, variant: "destructive" });
     } else {
-      toast({ title: "Competitor added", description: `${cleanName} is now being tracked.` });
+      // Invalidate server-side cache, then hard reload
+      await fetch(`/api/cache/invalidate?key=cc:competitors:${clientId}`, { method: "POST" }).catch(() => {});
       setOpen(false);
       setName("");
       setDomain("");
       setStrength("5");
-      router.refresh();
+      window.location.reload();
     }
     setLoading(false);
   }

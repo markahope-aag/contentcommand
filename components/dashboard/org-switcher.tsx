@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Organization } from "@/types/database";
 import {
@@ -21,8 +21,6 @@ export function OrgSwitcher() {
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     async function loadOrgs() {
@@ -34,30 +32,26 @@ export function OrgSwitcher() {
 
       if (!error && data) {
         setOrgs(data);
-        const orgId = searchParams.get("org");
-        const savedOrgId = typeof window !== "undefined"
-          ? localStorage.getItem("currentOrgId")
-          : null;
+        // Check URL param first, then localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const orgId = urlParams.get("org");
+        const savedOrgId = localStorage.getItem("currentOrgId");
         const targetId = orgId || savedOrgId;
         const match = data.find((o) => o.id === targetId) || data[0] || null;
         setCurrentOrg(match);
-        if (match && typeof window !== "undefined") {
+        if (match) {
           localStorage.setItem("currentOrgId", match.id);
         }
       }
       setLoading(false);
     }
     loadOrgs();
-  }, [searchParams]);
+  }, []);
 
   function switchOrg(org: Organization) {
     setCurrentOrg(org);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("currentOrgId", org.id);
-    }
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("org", org.id);
-    router.push(`${pathname}?${params.toString()}`);
+    localStorage.setItem("currentOrgId", org.id);
+    window.location.reload();
   }
 
   if (loading) {

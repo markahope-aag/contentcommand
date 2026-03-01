@@ -65,8 +65,8 @@ export default function NewClientPage() {
       toast({ title: "Failed to create client", description: error.message, variant: "destructive" });
       setLoading(false);
     } else {
-      toast({ title: "Client created", description: `${cleanName} has been added.` });
-      // Hard navigate to ensure server components refetch
+      // Invalidate server cache, then navigate
+      await fetch("/api/cache/invalidate?key=cc:clients", { method: "POST" }).catch(() => {});
       window.location.href = "/dashboard/clients";
     }
   }

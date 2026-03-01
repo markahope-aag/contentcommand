@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function OrganizationSettingsPage() {
   const [org, setOrg] = useState<Organization | null>(null);
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [members, setMembers] = useState<(OrganizationMember & { email?: string | null })[]>([]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [newOrgName, setNewOrgName] = useState("");
@@ -52,13 +52,11 @@ export default function OrganizationSettingsPage() {
         setName(orgData.name);
         setSlug(orgData.slug);
 
-        const { data: memberData } = await supabase
-          .from("organization_members")
-          .select("*")
-          .eq("org_id", orgId)
-          .order("created_at", { ascending: true });
-
-        if (memberData) setMembers(memberData);
+        const memberRes = await fetch(`/api/organizations/${orgId}/members`);
+        if (memberRes.ok) {
+          const memberJson = await memberRes.json();
+          if (memberJson.data) setMembers(memberJson.data);
+        }
       }
     }
     setLoading(false);
@@ -202,7 +200,7 @@ export default function OrganizationSettingsPage() {
                       key={member.id}
                       className="flex items-center justify-between rounded-md border p-3"
                     >
-                      <span className="text-sm font-mono">{member.user_id}</span>
+                      <span className="text-sm">{member.email ?? member.user_id}</span>
                       <Badge variant={member.role === "owner" ? "default" : "secondary"}>
                         {member.role}
                       </Badge>
