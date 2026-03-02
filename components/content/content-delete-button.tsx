@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,14 +22,13 @@ interface ContentDeleteButtonProps {
 
 export function ContentDeleteButton({ contentId, briefId }: ContentDeleteButtonProps) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleDelete() {
     setLoading(true);
     try {
       const res = await fetch(`/api/content/${contentId}`, { method: "DELETE" });
       if (res.ok) {
-        router.push(briefId ? `/dashboard/content/briefs/${briefId}` : "/dashboard/content");
+        window.location.href = briefId ? `/dashboard/content/briefs/${briefId}` : "/dashboard/content";
       }
     } finally {
       setLoading(false);

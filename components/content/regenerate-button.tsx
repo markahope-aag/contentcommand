@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +25,6 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
   const [feedback, setFeedback] = useState(previousFeedback || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   async function handleRegenerate() {
     setLoading(true);
@@ -49,7 +47,7 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
 
       const { data } = await res.json();
       setOpen(false);
-      router.push(`/dashboard/content/generation/${data.id}`);
+      window.location.href = `/dashboard/content/generation/${data.id}`;
     } finally {
       setLoading(false);
     }
