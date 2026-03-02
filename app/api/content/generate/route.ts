@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateContent } from "@/lib/ai/content-engine";
 import { RateLimitError } from "@/lib/integrations/base";
 import { contentGenerateSchema, validateBody } from "@/lib/validations";
@@ -16,12 +17,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validation = validateBody(contentGenerateSchema, body);
     if (!validation.success) return validation.response;
-    const { briefId, model } = validation.data;
+    const { briefId, model, feedback } = validation.data;
 
     // Verify access
     const { data: brief } = await supabase
       .from("content_briefs")
-      .select("client_id")
+      .select("client_id, status")
       .eq("id", briefId)
       .single();
 
@@ -36,7 +37,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const content = await generateContent({ briefId, model, clientId: brief.client_id });
+    // Auto-transition briefs in generated/revision_requested to approved so content-engine can proceed
+    if (brief.status === "generated" || brief.status === "revision_requested") {
+      const admin = createAdminClient();
+      // Transition to approved (skip workflow validation — this is a deliberate regeneration)
+      await admin
+        .from("content_briefs")
+        .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: user.id })
+        .eq("id", briefId);
+    }
+
+    const content = await generateContent({ briefId, model, clientId: brief.client_id, feedback });
     return NextResponse.json({ data: content });
   } catch (error) {
     if (error instanceof RateLimitError) {

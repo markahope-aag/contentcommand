@@ -463,6 +463,13 @@ export async function updateGeneratedContent(
   return data;
 }
 
+export async function deleteGeneratedContent(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("generated_content").delete().eq("id", id);
+  if (error) throw error;
+  await invalidateCache("cc:content-queue:all", "cc:pipeline-stats:*");
+}
+
 // ── Quality Analysis ────────────────────────────────────
 
 export async function getQualityAnalysis(contentId: string): Promise<ContentQualityAnalysis | null> {

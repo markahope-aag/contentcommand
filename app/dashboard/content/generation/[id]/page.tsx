@@ -5,6 +5,8 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { ContentEditor } from "@/components/content/content-editor";
 import { QualityScoreDisplay } from "@/components/content/quality-score-display";
 import { ReviewPanel } from "@/components/content/review-panel";
+import { ContentDeleteButton } from "@/components/content/content-delete-button";
+import { RegenerateButton } from "@/components/content/regenerate-button";
 import { getGeneratedContent, getQualityAnalysis, getContentBrief } from "@/lib/supabase/queries";
 
 interface GenerationPageProps {
@@ -22,6 +24,14 @@ export default async function GenerationPage({ params }: GenerationPageProps) {
     content.brief_id ? getContentBrief(content.brief_id) : null,
   ]);
 
+  // Build previous feedback for regenerate button
+  const feedbackParts: string[] = [];
+  if (content.reviewer_notes) feedbackParts.push(content.reviewer_notes);
+  if (content.revision_requests?.length) {
+    feedbackParts.push(content.revision_requests.join("\n"));
+  }
+  const previousFeedback = feedbackParts.join("\n\n") || undefined;
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
@@ -38,12 +48,19 @@ export default async function GenerationPage({ params }: GenerationPageProps) {
         <div className="flex gap-2">
           <ScoreButton contentId={id} />
           {brief && (
+            <RegenerateButton
+              briefId={brief.id}
+              previousFeedback={previousFeedback}
+            />
+          )}
+          {brief && (
             <Button variant="outline" asChild>
               <Link href={`/dashboard/content/briefs/${brief.id}`}>
                 View Brief
               </Link>
             </Button>
           )}
+          <ContentDeleteButton contentId={id} briefId={content.brief_id} />
         </div>
       </div>
 

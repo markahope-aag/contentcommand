@@ -14,9 +14,9 @@ const VALID_TRANSITIONS: Record<BriefStatus, BriefStatus[]> = {
   draft: ["approved"],
   approved: ["generating"],
   generating: ["generated"],
-  generated: ["reviewing"],
+  generated: ["reviewing", "approved"],
   reviewing: ["published", "revision_requested"],
-  revision_requested: ["draft", "approved"],
+  revision_requested: ["draft", "approved", "generating"],
   published: [],
 };
 

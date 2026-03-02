@@ -192,6 +192,7 @@ export const briefUpdateSchema = z.object({
 export const contentGenerateSchema = z.object({
   briefId: z.string().uuid("Invalid briefId"),
   model: z.enum(["claude", "openai"]).optional(),
+  feedback: z.string().max(5000).optional(),
 });
 
 // ── Content: Score ──────────────────────────────────────

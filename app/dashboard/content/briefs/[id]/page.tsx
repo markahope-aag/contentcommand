@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Sparkles } from "lucide-react";
+import { BriefDeleteButton } from "@/components/content/brief-delete-button";
+import { RegenerateButton } from "@/components/content/regenerate-button";
 import { getContentBrief, getGeneratedContentByBrief } from "@/lib/supabase/queries";
 
 interface BriefDetailPageProps {
@@ -19,6 +21,20 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
   if (!brief) notFound();
 
   const generatedContent = await getGeneratedContentByBrief(id);
+
+  // Build previous feedback for regenerate pre-fill when status is revision_requested
+  let previousFeedback: string | undefined;
+  if (brief.status === "revision_requested" && generatedContent.length > 0) {
+    const latest = generatedContent[0];
+    const parts: string[] = [];
+    if (latest.reviewer_notes) parts.push(latest.reviewer_notes);
+    if (latest.revision_requests?.length) {
+      parts.push(latest.revision_requests.join("\n"));
+    }
+    previousFeedback = parts.join("\n\n") || undefined;
+  }
+
+  const showRegenerate = ["approved", "generated", "revision_requested"].includes(brief.status);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -38,6 +54,17 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
           </Badge>
         </div>
       </div>
+
+      {brief.status === "revision_requested" && previousFeedback && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle className="text-base text-amber-700">Revision Requested</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{previousFeedback}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -190,6 +217,10 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
         {brief.status === "approved" && (
           <BriefActionButton briefId={brief.id} action="generate" label="Generate Content" />
         )}
+        {showRegenerate && (
+          <RegenerateButton briefId={brief.id} previousFeedback={previousFeedback} />
+        )}
+        <BriefDeleteButton briefId={brief.id} />
         <Button variant="outline" asChild>
           <Link href="/dashboard/content/briefs">Back to Briefs</Link>
         </Button>

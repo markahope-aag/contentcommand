@@ -22,6 +22,7 @@ interface GenerateContentOptions {
   briefId: string;
   model?: "claude" | "openai";
   clientId?: string;
+  feedback?: string;
 }
 
 function parseJsonResponse<T>(text: string): T {
@@ -282,7 +283,7 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
 }
 
 export async function generateContent(options: GenerateContentOptions): Promise<GeneratedContent> {
-  const { briefId, model = "claude", clientId } = options;
+  const { briefId, model = "claude", clientId, feedback } = options;
   const supabase = await createClient();
 
   // Fetch brief
@@ -293,8 +294,9 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     .single();
   if (briefError || !brief) throw new Error("Brief not found");
 
-  if (brief.status !== "approved") {
-    throw new Error("Brief must be approved before generating content");
+  const allowedStatuses = ["approved", "generated", "revision_requested"];
+  if (!allowedStatuses.includes(brief.status)) {
+    throw new Error("Brief must be approved, generated, or revision_requested before generating content");
   }
 
   // Use provided clientId to avoid duplicate fetch, fall back to brief's client_id
@@ -355,6 +357,7 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     controversialPositions: brief.controversial_positions,
     brandVoice: brief.client_voice_profile,
     serpContentAnalysis,
+    feedback,
   });
 
   const startTime = Date.now();

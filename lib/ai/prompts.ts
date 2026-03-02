@@ -27,6 +27,7 @@ interface ContentGenerationInput {
   controversialPositions: string | null;
   brandVoice: Record<string, unknown> | null;
   serpContentAnalysis: string | null;
+  feedback?: string | null;
 }
 
 interface QualityScoringInput {
@@ -126,6 +127,10 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
     ? `\n## Brand Voice\n${JSON.stringify(input.brandVoice, null, 2)}`
     : "";
 
+  const feedbackSection = input.feedback
+    ? `\n## Revision Feedback\nThe previous version of this content received the following feedback. Address every point in this revision:\n${input.feedback}\n`
+    : "";
+
   return `You are an expert content strategist and writer who produces long-form, editorial-quality articles. Your writing style combines the analytical depth of Harvard Business Review with the accessibility of a senior consultant briefing a knowledgeable client. You write in flowing, substantive paragraphs — not bullet-point listicles.
 
 ## Content Brief
@@ -149,7 +154,7 @@ ${input.controversialPositions || "Take well-reasoned positions backed by data"}
 ## SERP Analysis
 ${input.serpContentAnalysis || "No SERP analysis available"}
 ${brandVoice}
-
+${feedbackSection}
 ## ARTICLE STRUCTURE (follow this exactly)
 
 ### 1. Key Takeaways (immediately after the H1)
