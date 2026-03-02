@@ -464,8 +464,9 @@ export async function updateGeneratedContent(
 }
 
 export async function deleteGeneratedContent(id: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("generated_content").delete().eq("id", id);
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin.from("generated_content").delete().eq("id", id);
   if (error) throw error;
   await invalidateCache("cc:content-queue:all", "cc:pipeline-stats:*");
 }
