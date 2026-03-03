@@ -60,8 +60,8 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
       getCompetitiveSummary(clientId),
       getKeywordGaps(clientId),
       getTopOpportunities(clientId),
-      getCompetitiveMetricsHistory(clientId, "organic_traffic"),
-      getCompetitiveMetricsHistory(clientId, "keyword_count"),
+      getCompetitiveMetricsHistory(clientId, "organic_traffic", 365),
+      getCompetitiveMetricsHistory(clientId, "keyword_count", 365),
       getAiCitations(clientId),
     ]);
 

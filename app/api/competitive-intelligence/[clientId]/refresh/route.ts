@@ -48,21 +48,28 @@ export async function POST(
       expires_at: expires.toISOString(),
     });
 
-    // Write metrics history
-    const metrics = domainMetrics as Record<string, unknown>;
+    // Write metrics history — extract from DataForSEO's nested response
+    // Response shape: { "0": { items: [{ metrics: { organic: { etv, count, ... } } }] } }
+    // or directly: { items: [{ metrics: { organic: { ... } } }] }
+    const metricsRaw = domainMetrics as Record<string, unknown>;
+    const metricsContainer = (metricsRaw?.["0"] ?? metricsRaw) as Record<string, unknown>;
+    const metricsItems = Array.isArray(metricsContainer?.items) ? metricsContainer.items : [];
+    const metricsItem = (metricsItems[0] ?? {}) as Record<string, unknown>;
+    const organic = (metricsItem?.metrics as Record<string, unknown>)?.organic as Record<string, unknown> | undefined;
+
     const historyRows = [];
-    if (metrics?.organic_traffic != null) {
+    if (organic?.etv != null) {
       historyRows.push({
         client_id: clientId,
         metric_type: "organic_traffic",
-        metric_value: Number(metrics.organic_traffic),
+        metric_value: Math.round(Number(organic.etv)),
       });
     }
-    if (metrics?.organic_keywords != null) {
+    if (organic?.count != null) {
       historyRows.push({
         client_id: clientId,
         metric_type: "keyword_count",
-        metric_value: Number(metrics.organic_keywords),
+        metric_value: Number(organic.count),
       });
     }
     if (historyRows.length > 0) {
