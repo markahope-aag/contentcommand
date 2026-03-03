@@ -44,8 +44,7 @@ function classifyPage(
 }
 
 export async function syncExistingContent(
-  clientId: string,
-  ga4PropertyId?: string
+  clientId: string
 ): Promise<{ pages: number; keywords: number }> {
   const admin = createAdminClient();
 
@@ -63,10 +62,10 @@ export async function syncExistingContent(
   const syncId = syncRecord.id;
 
   try {
-    // 1. Get client domain and match to a GSC site
+    // 1. Get client config
     const { data: client } = await admin
       .from("clients")
-      .select("domain")
+      .select("domain, gsc_site_url, ga4_property_id")
       .eq("id", clientId)
       .single();
 
@@ -74,23 +73,29 @@ export async function syncExistingContent(
       throw new Error("Client has no domain configured");
     }
 
-    const sites = await googleSearchConsole.getSites(clientId);
-    if (!sites.length) {
-      throw new Error("No sites found in Google Search Console");
+    // Resolve GSC site URL: use explicit setting, or fall back to domain matching
+    let siteUrl = client.gsc_site_url;
+
+    if (!siteUrl) {
+      const sites = await googleSearchConsole.getSites(clientId);
+      if (!sites.length) {
+        throw new Error("No sites found in Google Search Console. Set the GSC Site URL in client settings.");
+      }
+
+      const clientDomain = client.domain.replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
+      const matchedSite = sites.find((s) => {
+        const siteDomain = (s.siteUrl || "").replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
+        return siteDomain === clientDomain || siteDomain.includes(clientDomain) || clientDomain.includes(siteDomain);
+      });
+
+      if (!matchedSite) {
+        throw new Error(`No GSC site matches client domain "${client.domain}". Set the GSC Site URL in client settings. Available: ${sites.map((s) => s.siteUrl).join(", ")}`);
+      }
+
+      siteUrl = matchedSite.siteUrl!;
     }
 
-    // Match client domain to one of the GSC sites
-    const clientDomain = client.domain.replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
-    const matchedSite = sites.find((s) => {
-      const siteDomain = (s.siteUrl || "").replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
-      return siteDomain === clientDomain || siteDomain.includes(clientDomain) || clientDomain.includes(siteDomain);
-    });
-
-    if (!matchedSite) {
-      throw new Error(`No GSC site matches client domain "${client.domain}". Available: ${sites.map((s) => s.siteUrl).join(", ")}`);
-    }
-
-    const siteUrl = matchedSite.siteUrl!;
+    const ga4PropertyId = client.ga4_property_id;
 
     // 2. Date ranges: current 28 days + previous 28 days
     const now = new Date();

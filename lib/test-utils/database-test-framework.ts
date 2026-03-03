@@ -127,6 +127,8 @@ export const testDataFactory = {
     target_keywords: ['test', 'keywords'],
     brand_voice: { tone: 'professional' },
     org_id: 'org-test-id',
+    gsc_site_url: null,
+    ga4_property_id: null,
     created_at: '2024-01-01T00:00:00Z',
     ...overrides,
   }),

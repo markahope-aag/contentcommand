@@ -88,6 +88,19 @@ export default async function ClientDetailPage({
                 </div>
               </div>
             )}
+            {(client.gsc_site_url || client.ga4_property_id) && (
+              <div>
+                <span className="text-sm text-muted-foreground">Google</span>
+                <div className="mt-1 space-y-1 text-sm">
+                  {client.gsc_site_url && (
+                    <div>GSC: <span className="font-mono text-xs">{client.gsc_site_url}</span></div>
+                  )}
+                  {client.ga4_property_id && (
+                    <div>GA4: <span className="font-mono text-xs">{client.ga4_property_id}</span></div>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

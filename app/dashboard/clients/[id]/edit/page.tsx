@@ -28,6 +28,8 @@ export default function EditClientPage() {
   const [domain, setDomain] = useState("");
   const [industry, setIndustry] = useState("");
   const [keywords, setKeywords] = useState("");
+  const [gscSiteUrl, setGscSiteUrl] = useState("");
+  const [ga4PropertyId, setGa4PropertyId] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -50,6 +52,8 @@ export default function EditClientPage() {
           ? data.target_keywords.join(", ")
           : "";
         setKeywords(kws);
+        setGscSiteUrl(data.gsc_site_url || "");
+        setGa4PropertyId(data.ga4_property_id || "");
       }
     }
     loadClient();
@@ -80,6 +84,8 @@ export default function EditClientPage() {
         domain: cleanDomain,
         industry: cleanIndustry,
         target_keywords: keywordsArray.length > 0 ? keywordsArray : null,
+        gsc_site_url: gscSiteUrl.trim() || null,
+        ga4_property_id: ga4PropertyId.trim() || null,
       })
       .eq("id", id);
 
@@ -162,6 +168,38 @@ export default function EditClientPage() {
                 Comma-separated list of target keywords
               </p>
             </div>
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium mb-3">Google Integration</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gscSiteUrl">Search Console Site URL</Label>
+                  <Input
+                    id="gscSiteUrl"
+                    value={gscSiteUrl}
+                    onChange={(e) => setGscSiteUrl(e.target.value)}
+                    placeholder="https://example.com or sc-domain:example.com"
+                    maxLength={300}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The exact site URL as shown in Google Search Console
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ga4PropertyId">GA4 Property ID</Label>
+                  <Input
+                    id="ga4PropertyId"
+                    value={ga4PropertyId}
+                    onChange={(e) => setGa4PropertyId(e.target.value)}
+                    placeholder="123456789"
+                    maxLength={20}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Numeric property ID from Google Analytics 4
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-4">
               <LoadingButton type="submit" loading={loading} loadingText="Saving...">
                 Save Changes

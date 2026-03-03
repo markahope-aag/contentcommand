@@ -26,6 +26,8 @@ export interface Client {
   target_keywords: string[] | null;
   brand_voice: Record<string, unknown> | null;
   org_id: string | null;
+  gsc_site_url: string | null;
+  ga4_property_id: string | null;
   created_at: string;
 }
 
