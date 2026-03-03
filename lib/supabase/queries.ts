@@ -838,14 +838,15 @@ export async function getTopOpportunities(
   limit = 20
 ): Promise<KeywordGapOpportunity[]> {
   const allGaps = await getKeywordGaps(clientId);
-  // Filter to gaps where competitor ranks but client doesn't (or ranks much lower)
+  // Filter to gaps where competitor outranks the client
   return allGaps
-    .filter(
-      (g) =>
-        g.competitor_position != null &&
-        g.competitor_position <= 20 &&
-        (g.client_position == null || g.client_position > 20)
-    )
+    .filter((g) => {
+      if (g.competitor_position == null) return false;
+      // Client doesn't rank at all — clear opportunity
+      if (g.client_position == null) return true;
+      // Competitor ranks meaningfully better than client
+      return g.competitor_position < g.client_position;
+    })
     .sort((a, b) => b.search_volume - a.search_volume)
     .slice(0, limit);
 }
