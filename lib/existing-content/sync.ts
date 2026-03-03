@@ -63,12 +63,34 @@ export async function syncExistingContent(
   const syncId = syncRecord.id;
 
   try {
-    // 1. Get site URL from GSC
+    // 1. Get client domain and match to a GSC site
+    const { data: client } = await admin
+      .from("clients")
+      .select("domain")
+      .eq("id", clientId)
+      .single();
+
+    if (!client?.domain) {
+      throw new Error("Client has no domain configured");
+    }
+
     const sites = await googleSearchConsole.getSites(clientId);
     if (!sites.length) {
       throw new Error("No sites found in Google Search Console");
     }
-    const siteUrl = sites[0].siteUrl!;
+
+    // Match client domain to one of the GSC sites
+    const clientDomain = client.domain.replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
+    const matchedSite = sites.find((s) => {
+      const siteDomain = (s.siteUrl || "").replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/$/, "").toLowerCase();
+      return siteDomain === clientDomain || siteDomain.includes(clientDomain) || clientDomain.includes(siteDomain);
+    });
+
+    if (!matchedSite) {
+      throw new Error(`No GSC site matches client domain "${client.domain}". Available: ${sites.map((s) => s.siteUrl).join(", ")}`);
+    }
+
+    const siteUrl = matchedSite.siteUrl!;
 
     // 2. Date ranges: current 28 days + previous 28 days
     const now = new Date();
