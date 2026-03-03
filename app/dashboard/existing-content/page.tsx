@@ -67,17 +67,32 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
     );
   }
 
-  const [summary, inventoryResult, decayingPages, strikingKeywords, cannibalizationGroups, lastSync] =
-    await Promise.all([
-      getContentAuditSummary(clientId),
-      getContentPages(clientId, { sortBy: "clicks", sortDir: "desc", pageSize: 50 }),
-      getDecayingPages(clientId),
-      getStrikingDistanceKeywords(clientId),
-      getCannibalizationGroups(clientId),
-      getLatestContentAuditSync(clientId),
-    ]);
+  // Queries may fail if the migration hasn't been pushed yet — handle gracefully
+  let summary = {
+    total_pages: 0, total_clicks: 0, total_impressions: 0,
+    avg_position: 0, avg_ctr: 0, decaying_count: 0,
+    thin_count: 0, opportunity_count: 0, active_count: 0,
+  };
+  let inventoryResult = { data: [] as import("@/types/database").ContentPage[], count: 0 };
+  let decayingPages: import("@/types/database").ContentPage[] = [];
+  let strikingKeywords: import("@/types/database").StrikingDistanceKeyword[] = [];
+  let cannibalizationGroups: import("@/types/database").CannibalizationGroup[] = [];
+  let lastSync: import("@/types/database").ContentAuditSync | null = null;
 
-  // Top performers = same data sorted by clicks (already default sort)
+  try {
+    [summary, inventoryResult, decayingPages, strikingKeywords, cannibalizationGroups, lastSync] =
+      await Promise.all([
+        getContentAuditSummary(clientId),
+        getContentPages(clientId, { sortBy: "clicks", sortDir: "desc", pageSize: 50 }),
+        getDecayingPages(clientId),
+        getStrikingDistanceKeywords(clientId),
+        getCannibalizationGroups(clientId),
+        getLatestContentAuditSync(clientId),
+      ]);
+  } catch {
+    // Tables/functions may not exist yet — show empty state
+  }
+
   const topPerformers = inventoryResult.data.slice(0, 20);
 
   return (
