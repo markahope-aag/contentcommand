@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/daily-competitor-analysis",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/daily-content-audit",
+      "schedule": "0 7 * * *"
     }
   ]
 }

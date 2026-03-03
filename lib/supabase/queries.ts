@@ -23,6 +23,12 @@ import type {
   CompetitiveMetricsHistory,
   CompetitiveSummary,
   KeywordGapOpportunity,
+  ContentPage,
+  ContentPageKeyword,
+  ContentAuditSync,
+  ContentAuditSummary,
+  StrikingDistanceKeyword,
+  CannibalizationGroup,
 } from "@/types/database";
 
 // ── Organizations ───────────────────────────────────────────
@@ -793,4 +799,191 @@ export async function getTopOpportunities(
     )
     .sort((a, b) => b.search_volume - a.search_volume)
     .slice(0, limit);
+}
+
+// ── Existing Content Audit ──────────────────────────────
+
+export async function getContentAuditSummary(
+  clientId: string
+): Promise<ContentAuditSummary> {
+  const cacheKey = `cc:content-audit-summary:${clientId}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_content_audit_summary", {
+      p_client_id: clientId,
+    });
+
+    if (error) throw error;
+
+    const raw = (data ?? {}) as ContentAuditSummary;
+    return {
+      total_pages: raw.total_pages ?? 0,
+      total_clicks: raw.total_clicks ?? 0,
+      total_impressions: raw.total_impressions ?? 0,
+      avg_position: raw.avg_position ?? 0,
+      avg_ctr: raw.avg_ctr ?? 0,
+      decaying_count: raw.decaying_count ?? 0,
+      thin_count: raw.thin_count ?? 0,
+      opportunity_count: raw.opportunity_count ?? 0,
+      active_count: raw.active_count ?? 0,
+    };
+  }, 300);
+}
+
+export async function getContentPages(
+  clientId: string,
+  options?: {
+    status?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+    page?: number;
+    pageSize?: number;
+  }
+): Promise<PaginatedResult<ContentPage>> {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const sortBy = options?.sortBy ?? "clicks";
+  const ascending = (options?.sortDir ?? "desc") === "asc";
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("content_pages")
+    .select("*", { count: "exact" })
+    .eq("client_id", clientId)
+    .order(sortBy, { ascending })
+    .range(from, to);
+
+  if (options?.status) {
+    query = query.eq("status", options.status);
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return { data: (data ?? []) as ContentPage[], count: count ?? 0 };
+}
+
+export async function getDecayingPages(
+  clientId: string
+): Promise<ContentPage[]> {
+  const cacheKey = `cc:decaying-pages:${clientId}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("content_pages")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("status", "decaying")
+      .order("clicks", { ascending: true })
+      .limit(100);
+
+    if (error) throw error;
+    return (data ?? []) as ContentPage[];
+  }, 300);
+}
+
+export async function getStrikingDistanceKeywords(
+  clientId: string
+): Promise<StrikingDistanceKeyword[]> {
+  const cacheKey = `cc:striking-distance:${clientId}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("content_page_keywords")
+      .select("*")
+      .eq("client_id", clientId)
+      .gte("position", 4)
+      .lte("position", 20)
+      .order("impressions", { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    return ((data ?? []) as ContentPageKeyword[]).map((kw) => ({
+      keyword: kw.keyword,
+      page_path: kw.page_path,
+      position: kw.position,
+      impressions: kw.impressions,
+      clicks: kw.clicks,
+      ctr: kw.ctr,
+      prev_position: kw.prev_position,
+    }));
+  }, 300);
+}
+
+export async function getCannibalizationGroups(
+  clientId: string
+): Promise<CannibalizationGroup[]> {
+  const cacheKey = `cc:cannibalization:${clientId}`;
+  return withCache(cacheKey, async () => {
+    const supabase = await createClient();
+    // Get keywords that appear on multiple pages
+    const { data, error } = await supabase
+      .from("content_page_keywords")
+      .select("keyword, page_path, position, clicks, impressions")
+      .eq("client_id", clientId)
+      .order("keyword")
+      .order("position", { ascending: true });
+
+    if (error) throw error;
+
+    // Group by keyword, keep only those with 2+ pages
+    const groups = new Map<
+      string,
+      { page_path: string; position: number; clicks: number; impressions: number }[]
+    >();
+    for (const row of data ?? []) {
+      const existing = groups.get(row.keyword) ?? [];
+      existing.push({
+        page_path: row.page_path,
+        position: row.position,
+        clicks: row.clicks,
+        impressions: row.impressions,
+      });
+      groups.set(row.keyword, existing);
+    }
+
+    const result: CannibalizationGroup[] = [];
+    groups.forEach((pages, keyword) => {
+      if (pages.length >= 2) {
+        result.push({ keyword, pages });
+      }
+    });
+
+    // Sort by number of competing pages descending
+    return result.sort((a, b) => b.pages.length - a.pages.length).slice(0, 100);
+  }, 300);
+}
+
+export async function getContentPageKeywords(
+  clientId: string,
+  pagePath: string
+): Promise<ContentPageKeyword[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_page_keywords")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("page_path", pagePath)
+    .order("clicks", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as ContentPageKeyword[];
+}
+
+export async function getLatestContentAuditSync(
+  clientId: string
+): Promise<ContentAuditSync | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_audit_syncs")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error;
+  return data as ContentAuditSync | null;
 }

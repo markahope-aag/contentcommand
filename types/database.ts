@@ -286,3 +286,89 @@ export interface DomainMetrics {
   backlinks: number;
   domain_rank: number;
 }
+
+// ── Existing Content Audit ──────────────────────────────
+
+export interface ContentPage {
+  id: string;
+  client_id: string;
+  page_url: string;
+  page_path: string;
+  title: string | null;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+  prev_clicks: number;
+  prev_impressions: number;
+  prev_ctr: number;
+  prev_position: number;
+  page_views: number;
+  bounce_rate: number;
+  avg_session_duration: number;
+  status: "active" | "decaying" | "thin" | "opportunity";
+  period_start: string;
+  period_end: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentPageKeyword {
+  id: string;
+  client_id: string;
+  page_path: string;
+  keyword: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+  prev_clicks: number;
+  prev_impressions: number;
+  prev_ctr: number;
+  prev_position: number;
+  period_end: string;
+  created_at: string;
+}
+
+export interface ContentAuditSync {
+  id: string;
+  client_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  pages_synced: number;
+  keywords_synced: number;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ContentAuditSummary {
+  total_pages: number;
+  total_clicks: number;
+  total_impressions: number;
+  avg_position: number;
+  avg_ctr: number;
+  decaying_count: number;
+  thin_count: number;
+  opportunity_count: number;
+  active_count: number;
+}
+
+export interface StrikingDistanceKeyword {
+  keyword: string;
+  page_path: string;
+  position: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  prev_position: number;
+}
+
+export interface CannibalizationGroup {
+  keyword: string;
+  pages: {
+    page_path: string;
+    position: number;
+    clicks: number;
+    impressions: number;
+  }[];
+}

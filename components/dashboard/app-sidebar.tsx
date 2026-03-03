@@ -22,6 +22,7 @@ import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊" },
   { name: "Clients", href: "/dashboard/clients", icon: "👥" },
+  { name: "Existing Content", href: "/dashboard/existing-content", icon: "📄" },
   { name: "Content", href: "/dashboard/content", icon: "📝" },
   { name: "Analytics", href: "/dashboard/analytics", icon: "📈" },
   { name: "Competitive Intel", href: "/dashboard/competitive-intelligence", icon: "🎯" },
