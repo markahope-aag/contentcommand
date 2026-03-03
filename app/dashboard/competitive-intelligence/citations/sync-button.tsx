@@ -6,22 +6,25 @@ import { RefreshCw } from "lucide-react";
 
 interface SyncButtonProps {
   clientId: string;
+  llmrefsOrgId?: string | null;
+  llmrefsProjectId?: string | null;
 }
 
-export function SyncButton({ clientId }: SyncButtonProps) {
+export function SyncButton({ clientId, llmrefsOrgId, llmrefsProjectId }: SyncButtonProps) {
   const [loading, setLoading] = useState(false);
+
+  const isConfigured = llmrefsOrgId && llmrefsProjectId;
 
   async function handleSync() {
     setLoading(true);
     try {
-      // TODO: In production, these IDs would come from a settings page or config
       await fetch("/api/integrations/llmrefs/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId,
-          organizationId: "default",
-          projectId: "default",
+          organizationId: llmrefsOrgId,
+          projectId: llmrefsProjectId,
         }),
       });
       window.location.reload();
@@ -37,7 +40,8 @@ export function SyncButton({ clientId }: SyncButtonProps) {
       variant="outline"
       size="sm"
       onClick={handleSync}
-      disabled={loading}
+      disabled={loading || !isConfigured}
+      title={isConfigured ? undefined : "Configure LLMrefs org & project ID in client settings"}
     >
       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
       {loading ? "Syncing..." : "Sync LLMrefs"}

@@ -218,7 +218,17 @@ export async function syncExistingContent(
       });
     });
 
-    // 6. Upsert pages in batches
+    // 6. Clear stale data for this client before upserting fresh data
+    await admin
+      .from("content_page_keywords")
+      .delete()
+      .eq("client_id", clientId);
+    await admin
+      .from("content_pages")
+      .delete()
+      .eq("client_id", clientId);
+
+    // Upsert pages in batches
     const PAGE_BATCH = 100;
     for (let i = 0; i < pageRows.length; i += PAGE_BATCH) {
       const batch = pageRows.slice(i, i + PAGE_BATCH);

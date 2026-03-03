@@ -129,6 +129,8 @@ export const testDataFactory = {
     org_id: 'org-test-id',
     gsc_site_url: null,
     ga4_property_id: null,
+    llmrefs_org_id: null,
+    llmrefs_project_id: null,
     created_at: '2024-01-01T00:00:00Z',
     ...overrides,
   }),

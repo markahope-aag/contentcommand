@@ -8,6 +8,8 @@ import { CitationTracker } from "@/components/competitive/citation-tracker";
 import { OpportunityList } from "@/components/competitive/opportunity-list";
 import { PpcKeywordsTable } from "@/components/competitive/ppc-keywords-table";
 import { DomainHistoryChart } from "@/components/competitive/domain-history-chart";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ClientSelector } from "./client-selector";
 import { RefreshButton } from "./refresh-button";
 import {
@@ -128,6 +130,13 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
         </TabsContent>
 
         <TabsContent value="citations" className="space-y-6">
+          <div className="flex justify-end">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dashboard/competitive-intelligence/citations?clientId=${clientId}`}>
+                View Full Citations Dashboard
+              </Link>
+            </Button>
+          </div>
           <CitationTracker citations={citations} />
         </TabsContent>
 

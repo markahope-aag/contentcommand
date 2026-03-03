@@ -6,7 +6,7 @@ import { CitationTracker } from "@/components/competitive/citation-tracker";
 import { CitationTrendChart } from "@/components/competitive/citation-trend-chart";
 import { ClientSelector } from "../client-selector";
 import { SyncButton } from "./sync-button";
-import { getClients, getAiCitations } from "@/lib/supabase/queries";
+import { getClients, getClient, getAiCitations } from "@/lib/supabase/queries";
 
 interface PageProps {
   searchParams: Promise<{ clientId?: string }>;
@@ -36,7 +36,10 @@ export default async function CitationsPage({ searchParams }: PageProps) {
     ? selectedClientId
     : clients[0].id;
 
-  const citations = await getAiCitations(clientId);
+  const [client, citations] = await Promise.all([
+    getClient(clientId),
+    getAiCitations(clientId),
+  ]);
 
   // Summary stats
   const totalCitations = citations.filter((c) => c.cited).length;
@@ -56,7 +59,11 @@ export default async function CitationsPage({ searchParams }: PageProps) {
         <h1 className="text-3xl font-bold">AI Citations</h1>
         <div className="flex items-center gap-3">
           <ClientSelector clients={clients} selectedClientId={clientId} />
-          <SyncButton clientId={clientId} />
+          <SyncButton
+            clientId={clientId}
+            llmrefsOrgId={client?.llmrefs_org_id}
+            llmrefsProjectId={client?.llmrefs_project_id}
+          />
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import {
   getCompetitiveMetricsHistory,
   getCompetitiveAnalysis,
 } from "@/lib/supabase/queries";
+import { spyFu } from "@/lib/integrations/spyfu";
 
 interface PageProps {
   params: Promise<{ competitorId: string }>;
@@ -53,6 +54,29 @@ export default async function CompetitorDetailPage({ params, searchParams }: Pag
   const domainAnalysis = analyses.find((a) => a.analysis_type === "domain_metrics");
   const clientMetrics = (domainAnalysis?.data ?? {}) as Record<string, unknown>;
 
+  // Fetch competitor domain metrics via SpyFu
+  let competitorMetrics: {
+    organic_traffic?: number;
+    organic_keywords?: number;
+    backlinks?: number;
+    domain_rank?: number;
+  } | undefined;
+
+  if (competitor.domain) {
+    try {
+      const stats = await spyFu.getDomainStats(competitor.domain, resolvedClientId);
+      const latest = stats?.results?.[0];
+      if (latest) {
+        competitorMetrics = {
+          organic_traffic: latest.monthlyOrganicClicks,
+          organic_keywords: latest.totalOrganicResults,
+        };
+      }
+    } catch {
+      // SpyFu not configured or API error — continue without competitor metrics
+    }
+  }
+
   // Filter overlap history to this competitor
   const competitorOverlap = overlapHistory.filter(
     (h) => h.competitor_id === competitorId
@@ -82,6 +106,7 @@ export default async function CompetitorDetailPage({ params, searchParams }: Pag
           domain_rank: clientMetrics.domain_rank as number | undefined,
         }}
         competitor={competitor}
+        competitorMetrics={competitorMetrics}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

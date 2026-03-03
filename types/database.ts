@@ -28,6 +28,8 @@ export interface Client {
   org_id: string | null;
   gsc_site_url: string | null;
   ga4_property_id: string | null;
+  llmrefs_org_id: string | null;
+  llmrefs_project_id: string | null;
   created_at: string;
 }
 

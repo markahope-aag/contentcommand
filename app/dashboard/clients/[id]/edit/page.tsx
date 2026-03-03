@@ -30,6 +30,8 @@ export default function EditClientPage() {
   const [keywords, setKeywords] = useState("");
   const [gscSiteUrl, setGscSiteUrl] = useState("");
   const [ga4PropertyId, setGa4PropertyId] = useState("");
+  const [llmrefsOrgId, setLlmrefsOrgId] = useState("");
+  const [llmrefsProjectId, setLlmrefsProjectId] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -54,6 +56,8 @@ export default function EditClientPage() {
         setKeywords(kws);
         setGscSiteUrl(data.gsc_site_url || "");
         setGa4PropertyId(data.ga4_property_id || "");
+        setLlmrefsOrgId(data.llmrefs_org_id || "");
+        setLlmrefsProjectId(data.llmrefs_project_id || "");
       }
     }
     loadClient();
@@ -86,6 +90,8 @@ export default function EditClientPage() {
         target_keywords: keywordsArray.length > 0 ? keywordsArray : null,
         gsc_site_url: gscSiteUrl.trim() || null,
         ga4_property_id: ga4PropertyId.trim() || null,
+        llmrefs_org_id: llmrefsOrgId.trim() || null,
+        llmrefs_project_id: llmrefsProjectId.trim() || null,
       })
       .eq("id", id);
 
@@ -196,6 +202,31 @@ export default function EditClientPage() {
                   <p className="text-xs text-muted-foreground">
                     Numeric property ID from Google Analytics 4
                   </p>
+                </div>
+              </div>
+            </div>
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium mb-3">LLMrefs (AI Citations)</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="llmrefsOrgId">Organization ID</Label>
+                  <Input
+                    id="llmrefsOrgId"
+                    value={llmrefsOrgId}
+                    onChange={(e) => setLlmrefsOrgId(e.target.value)}
+                    placeholder="your-organization-id"
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="llmrefsProjectId">Project ID</Label>
+                  <Input
+                    id="llmrefsProjectId"
+                    value={llmrefsProjectId}
+                    onChange={(e) => setLlmrefsProjectId(e.target.value)}
+                    placeholder="your-project-id"
+                    maxLength={100}
+                  />
                 </div>
               </div>
             </div>
