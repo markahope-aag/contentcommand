@@ -74,16 +74,18 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
     thin_count: 0, opportunity_count: 0, active_count: 0,
   };
   let inventoryResult = { data: [] as import("@/types/database").ContentPage[], count: 0 };
+  let topPerformersResult = { data: [] as import("@/types/database").ContentPage[], count: 0 };
   let decayingPages: import("@/types/database").ContentPage[] = [];
   let strikingKeywords: import("@/types/database").StrikingDistanceKeyword[] = [];
   let cannibalizationGroups: import("@/types/database").CannibalizationGroup[] = [];
   let lastSync: import("@/types/database").ContentAuditSync | null = null;
 
   try {
-    [summary, inventoryResult, decayingPages, strikingKeywords, cannibalizationGroups, lastSync] =
+    [summary, inventoryResult, topPerformersResult, decayingPages, strikingKeywords, cannibalizationGroups, lastSync] =
       await Promise.all([
         getContentAuditSummary(clientId),
-        getContentPages(clientId, { sortBy: "clicks", sortDir: "desc", pageSize: 50 }),
+        getContentPages(clientId, { sortBy: "impressions", sortDir: "desc", pageSize: 50 }),
+        getContentPages(clientId, { sortBy: "clicks", sortDir: "desc", pageSize: 20 }),
         getDecayingPages(clientId),
         getStrikingDistanceKeywords(clientId),
         getCannibalizationGroups(clientId),
@@ -92,8 +94,6 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
   } catch {
     // Tables/functions may not exist yet — show empty state
   }
-
-  const topPerformers = inventoryResult.data.slice(0, 20);
 
   return (
     <div className="space-y-6">
@@ -142,8 +142,8 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
 
         <TabsContent value="top-performers" className="space-y-6">
           <ContentPagesTable
-            pages={topPerformers}
-            count={topPerformers.length}
+            pages={topPerformersResult.data}
+            count={topPerformersResult.count}
             title="Top Performers"
           />
         </TabsContent>
