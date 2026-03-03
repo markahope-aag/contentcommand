@@ -5,9 +5,10 @@ import type { StrikingDistanceKeyword } from "@/types/database";
 
 interface StrikingDistanceTableProps {
   keywords: StrikingDistanceKeyword[];
+  clientId: string;
 }
 
-export function StrikingDistanceTable({ keywords }: StrikingDistanceTableProps) {
+export function StrikingDistanceTable({ keywords, clientId }: StrikingDistanceTableProps) {
   if (keywords.length === 0) {
     return (
       <Card>
@@ -84,7 +85,7 @@ export function StrikingDistanceTable({ keywords }: StrikingDistanceTableProps) 
                     <td className="py-2">
                       <Button asChild variant="ghost" size="sm">
                         <Link
-                          href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(kw.keyword)}&type=optimization`}
+                          href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(kw.keyword)}&type=optimization&clientId=${clientId}&page=${encodeURIComponent(kw.page_path)}`}
                         >
                           Create Brief
                         </Link>

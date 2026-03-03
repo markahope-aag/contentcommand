@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
@@ -20,19 +20,27 @@ import type { Client } from "@/types/database";
 
 export default function NewBriefPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Read URL params
+  const urlKeyword = searchParams.get("keyword") || "";
+  const urlType = searchParams.get("type") as "optimization" | "refresh" | "consolidation" | "new" | "thin" | "opportunity" | "decaying" | null;
+  const urlClientId = searchParams.get("clientId") || "";
+  const urlPage = searchParams.get("page") || "";
+
   // AI generation fields
-  const [selectedClient, setSelectedClient] = useState("");
-  const [targetKeyword, setTargetKeyword] = useState("");
+  const [selectedClient, setSelectedClient] = useState(urlClientId);
+  const [targetKeyword, setTargetKeyword] = useState(urlKeyword);
   const [contentType, setContentType] = useState("blog_post");
+  const [contentPurpose, setContentPurpose] = useState(urlType || "");
 
   // Manual fields
   const [manualTitle, setManualTitle] = useState("");
-  const [manualKeyword, setManualKeyword] = useState("");
+  const [manualKeyword, setManualKeyword] = useState(urlKeyword);
   const [manualAudience, setManualAudience] = useState("");
   const [manualAngle, setManualAngle] = useState("");
   const [manualWordCount, setManualWordCount] = useState("1500");
@@ -64,14 +72,19 @@ export default function NewBriefPage() {
     setLoading(true);
     setError(null);
     try {
+      const body: Record<string, string | undefined> = {
+        clientId: selectedClient,
+        targetKeyword,
+        contentType,
+      };
+      const effectiveType = urlType || contentPurpose;
+      if (effectiveType) body.briefType = effectiveType;
+      if (urlPage) body.pagePath = urlPage;
+
       const res = await fetch("/api/content/briefs/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: selectedClient,
-          targetKeyword,
-          contentType,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Generation failed");
@@ -124,9 +137,32 @@ export default function NewBriefPage() {
     }
   };
 
+  const briefTypeLabel: Record<string, string> = {
+    optimization: "Optimization",
+    refresh: "Content Refresh",
+    consolidation: "Consolidation",
+    new: "New Content",
+    decaying: "Restore Decaying Content",
+    thin: "Expand Thin Content",
+    opportunity: "Capture Opportunity",
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-3xl font-bold">New Content Brief</h1>
+
+      {urlType && (
+        <div className="rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 text-sm">
+          <span className="font-medium">Brief type:</span> {briefTypeLabel[urlType] || urlType}
+          {urlPage && (
+            <>
+              {" "}&middot;{" "}
+              <span className="font-medium">Page:</span>{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">{urlPage}</code>
+            </>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -167,6 +203,29 @@ export default function NewBriefPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {!urlType && (
+          <div className="space-y-2">
+            <Label>Content Purpose</Label>
+            <Select value={contentPurpose} onValueChange={setContentPurpose}>
+              <SelectTrigger>
+                <SelectValue placeholder="What is the goal of this content?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Capture a new keyword</SelectItem>
+                <SelectItem value="optimization">Outrank a competitor</SelectItem>
+                <SelectItem value="authority">Build domain authority for a content cluster</SelectItem>
+                <SelectItem value="decaying">Restore decaying content</SelectItem>
+                <SelectItem value="thin">Expand thin content</SelectItem>
+                <SelectItem value="opportunity">Improve CTR on high-impression page</SelectItem>
+                <SelectItem value="consolidation">Consolidate cannibalized pages</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Helps the AI tailor the brief to your specific goal.
+            </p>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="ai">
@@ -184,7 +243,8 @@ export default function NewBriefPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Enter a target keyword and we&apos;ll analyze competitive data
+                Enter a target keyword and we&apos;ll analyze competitive data,
+                existing content performance, keyword gaps, PPC intelligence,
                 and AI citation opportunities to generate a comprehensive brief.
               </p>
               <div className="space-y-2">

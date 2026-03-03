@@ -7,9 +7,10 @@ import type { SpyFuPpcKeyword } from "@/lib/integrations/spyfu";
 interface PpcKeywordsTableProps {
   keywords: SpyFuPpcKeyword[];
   competitorDomain: string;
+  clientId: string;
 }
 
-export function PpcKeywordsTable({ keywords, competitorDomain }: PpcKeywordsTableProps) {
+export function PpcKeywordsTable({ keywords, competitorDomain, clientId }: PpcKeywordsTableProps) {
   if (keywords.length === 0) {
     return (
       <Card>
@@ -73,7 +74,7 @@ export function PpcKeywordsTable({ keywords, competitorDomain }: PpcKeywordsTabl
                   <td className="py-2">
                     <Button asChild variant="ghost" size="sm">
                       <Link
-                        href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(kw.keyword)}`}
+                        href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(kw.keyword)}&clientId=${clientId}`}
                       >
                         Create Brief
                       </Link>

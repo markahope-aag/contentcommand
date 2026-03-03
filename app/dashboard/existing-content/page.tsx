@@ -137,6 +137,7 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
             pages={inventoryResult.data}
             count={inventoryResult.count}
             title="Content Inventory"
+            clientId={clientId}
           />
         </TabsContent>
 
@@ -145,19 +146,20 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
             pages={topPerformersResult.data}
             count={topPerformersResult.count}
             title="Top Performers"
+            clientId={clientId}
           />
         </TabsContent>
 
         <TabsContent value="decay" className="space-y-6">
-          <DecayTable pages={decayingPages} />
+          <DecayTable pages={decayingPages} clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="striking-distance" className="space-y-6">
-          <StrikingDistanceTable keywords={strikingKeywords} />
+          <StrikingDistanceTable keywords={strikingKeywords} clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="cannibalization" className="space-y-6">
-          <CannibalizationView groups={cannibalizationGroups} />
+          <CannibalizationView groups={cannibalizationGroups} clientId={clientId} />
         </TabsContent>
       </Tabs>
     </div>

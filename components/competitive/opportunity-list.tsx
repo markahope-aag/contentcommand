@@ -5,9 +5,10 @@ import type { KeywordGapOpportunity } from "@/types/database";
 
 interface OpportunityListProps {
   opportunities: KeywordGapOpportunity[];
+  clientId: string;
 }
 
-export function OpportunityList({ opportunities }: OpportunityListProps) {
+export function OpportunityList({ opportunities, clientId }: OpportunityListProps) {
   if (opportunities.length === 0) {
     return (
       <Card>
@@ -44,7 +45,7 @@ export function OpportunityList({ opportunities }: OpportunityListProps) {
               <div className="flex items-center gap-2 ml-4">
                 <Badge variant="destructive">Gap</Badge>
                 <Link
-                  href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(opp.keyword)}`}
+                  href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(opp.keyword)}&clientId=${clientId}`}
                   className="text-xs text-primary hover:underline whitespace-nowrap"
                 >
                   Create Brief

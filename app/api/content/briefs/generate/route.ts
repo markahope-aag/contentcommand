@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validation = validateBody(briefGenerateSchema, body);
     if (!validation.success) return validation.response;
-    const { clientId, targetKeyword, contentType } = validation.data;
+    const { clientId, targetKeyword, contentType, briefType, pagePath } = validation.data;
 
     // Permission check
     const { data: access } = await supabase.rpc("user_has_client_access", {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const brief = await generateBrief({ clientId, targetKeyword, contentType });
+    const brief = await generateBrief({ clientId, targetKeyword, contentType, briefType, pagePath });
     return NextResponse.json({ data: brief });
   } catch (error) {
     if (error instanceof RateLimitError) {

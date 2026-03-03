@@ -5,9 +5,10 @@ import type { ContentPage } from "@/types/database";
 
 interface DecayTableProps {
   pages: ContentPage[];
+  clientId: string;
 }
 
-export function DecayTable({ pages }: DecayTableProps) {
+export function DecayTable({ pages, clientId }: DecayTableProps) {
   if (pages.length === 0) {
     return (
       <Card>
@@ -74,7 +75,7 @@ export function DecayTable({ pages }: DecayTableProps) {
                     <td className="py-2">
                       <Button asChild variant="ghost" size="sm">
                         <Link
-                          href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(page.page_path)}&type=refresh`}
+                          href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(page.page_path)}&type=decaying&clientId=${clientId}&page=${encodeURIComponent(page.page_path)}`}
                         >
                           Create Brief
                         </Link>

@@ -108,7 +108,7 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
         </TabsContent>
 
         <TabsContent value="ppc" className="space-y-6">
-          <PpcKeywordsTable keywords={ppcKeywords} competitorDomain={domain} />
+          <PpcKeywordsTable keywords={ppcKeywords} competitorDomain={domain} clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="trends" className="space-y-6">
@@ -141,7 +141,7 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
         </TabsContent>
 
         <TabsContent value="opportunities" className="space-y-6">
-          <OpportunityList opportunities={opportunities} />
+          <OpportunityList opportunities={opportunities} clientId={clientId} />
         </TabsContent>
       </Tabs>
     </div>

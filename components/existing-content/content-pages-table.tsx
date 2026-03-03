@@ -8,6 +8,7 @@ interface ContentPagesTableProps {
   pages: ContentPage[];
   count: number;
   title?: string;
+  clientId: string;
 }
 
 const statusVariant: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
@@ -21,6 +22,7 @@ export function ContentPagesTable({
   pages,
   count,
   title = "Content Inventory",
+  clientId,
 }: ContentPagesTableProps) {
   if (pages.length === 0) {
     return (
@@ -88,7 +90,7 @@ export function ContentPagesTable({
                   <td className="py-2">
                     <Button asChild variant="ghost" size="sm">
                       <Link
-                        href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(page.page_path)}&type=optimization`}
+                        href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(page.page_path)}&type=${page.status === "decaying" ? "decaying" : page.status === "thin" ? "thin" : page.status === "opportunity" ? "opportunity" : "optimization"}&clientId=${clientId}&page=${encodeURIComponent(page.page_path)}`}
                       >
                         Create Brief
                       </Link>

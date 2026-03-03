@@ -160,6 +160,8 @@ export const briefGenerateSchema = z.object({
   clientId,
   targetKeyword: keyword.pipe(z.string().min(1, "targetKeyword is required")),
   contentType: shortText.optional(),
+  briefType: z.enum(["optimization", "refresh", "consolidation", "new", "thin", "opportunity", "decaying", "authority"]).optional(),
+  pagePath: shortText.optional(),
 });
 
 // ── Content: Brief Update ───────────────────────────────

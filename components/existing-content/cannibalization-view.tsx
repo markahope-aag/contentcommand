@@ -5,9 +5,10 @@ import type { CannibalizationGroup } from "@/types/database";
 
 interface CannibalizationViewProps {
   groups: CannibalizationGroup[];
+  clientId: string;
 }
 
-export function CannibalizationView({ groups }: CannibalizationViewProps) {
+export function CannibalizationView({ groups, clientId }: CannibalizationViewProps) {
   if (groups.length === 0) {
     return (
       <Card>
@@ -40,7 +41,7 @@ export function CannibalizationView({ groups }: CannibalizationViewProps) {
               </CardTitle>
               <Button asChild variant="ghost" size="sm">
                 <Link
-                  href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(group.keyword)}&type=consolidation`}
+                  href={`/dashboard/content/briefs/new?keyword=${encodeURIComponent(group.keyword)}&type=consolidation&clientId=${clientId}`}
                 >
                   Create Brief
                 </Link>

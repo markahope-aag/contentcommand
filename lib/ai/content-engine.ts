@@ -5,16 +5,30 @@ import { generateWithOpenAI } from "./openai-client";
 import { analyzeContentQuality } from "./quality-analyzer";
 import { buildBriefGenerationPrompt, buildContentGenerationPrompt, SYSTEM_PROMPTS } from "./prompts";
 import { frase } from "@/lib/integrations/frase";
+import { spyFu } from "@/lib/integrations/spyfu";
+import {
+  getContentPageKeywords,
+  getCannibalizationGroups,
+  getKeywordGaps,
+} from "@/lib/supabase/queries";
+import { logger } from "@/lib/logger";
 import type {
   ContentBrief,
   GeneratedContent,
   ContentQualityAnalysis,
+  ContentPage,
+  ContentPageKeyword,
+  CannibalizationGroup,
+  KeywordGapOpportunity,
 } from "@/types/database";
+import type { SpyFuPpcKeyword } from "@/lib/integrations/spyfu";
 
 interface GenerateBriefOptions {
   clientId: string;
   targetKeyword: string;
   contentType?: string;
+  briefType?: "optimization" | "refresh" | "consolidation" | "new" | "thin" | "opportunity" | "decaying" | "authority";
+  pagePath?: string;
 }
 
 interface GenerateContentOptions {
@@ -105,6 +119,105 @@ function mergeKeywords(fraseKeywords: string[] | null, aiKeywords: string[] | nu
 }
 
 /**
+ * Summarize an existing content page for prompt context.
+ */
+function summarizeExistingPage(page: ContentPage): Record<string, unknown> {
+  return {
+    page_path: page.page_path,
+    clicks: page.clicks,
+    impressions: page.impressions,
+    ctr: page.ctr,
+    position: Number(page.position).toFixed(1),
+    prev_clicks: page.prev_clicks,
+    prev_impressions: page.prev_impressions,
+    prev_position: Number(page.prev_position).toFixed(1),
+    status: page.status,
+  };
+}
+
+/**
+ * Summarize page keywords (top 20) for prompt context.
+ */
+function summarizePageKeywords(keywords: ContentPageKeyword[]): Record<string, unknown>[] {
+  return keywords.slice(0, 20).map((kw) => ({
+    keyword: kw.keyword,
+    position: Number(kw.position).toFixed(1),
+    clicks: kw.clicks,
+    impressions: kw.impressions,
+  }));
+}
+
+/**
+ * Summarize cannibalization groups relevant to the target keyword.
+ */
+function summarizeCannibalization(
+  groups: CannibalizationGroup[],
+  targetKeyword: string
+): Record<string, unknown>[] {
+  const lower = targetKeyword.toLowerCase();
+  const relevant = groups.filter(
+    (g) => g.keyword.toLowerCase().includes(lower) || lower.includes(g.keyword.toLowerCase())
+  );
+  return relevant.slice(0, 5).map((g) => ({
+    keyword: g.keyword,
+    competing_pages: g.pages.map((p) => ({
+      page_path: p.page_path,
+      position: p.position,
+      clicks: p.clicks,
+    })),
+  }));
+}
+
+/**
+ * Summarize keyword gaps relevant to the target keyword.
+ */
+function summarizeKeywordGaps(
+  gaps: KeywordGapOpportunity[],
+  targetKeyword: string
+): Record<string, unknown>[] {
+  const lower = targetKeyword.toLowerCase();
+  // Prefer gaps related to the keyword, fall back to highest volume
+  const related = gaps.filter((g) =>
+    g.keyword.toLowerCase().includes(lower) || lower.includes(g.keyword.toLowerCase())
+  );
+  const selected = related.length >= 5 ? related : gaps;
+  return selected
+    .sort((a, b) => b.search_volume - a.search_volume)
+    .slice(0, 15)
+    .map((g) => ({
+      keyword: g.keyword,
+      search_volume: g.search_volume,
+      difficulty: g.difficulty,
+      competitor_domain: g.competitor_domain,
+      competitor_position: g.competitor_position,
+    }));
+}
+
+/**
+ * Summarize PPC keywords relevant to the target keyword.
+ */
+function summarizePpcData(
+  keywords: SpyFuPpcKeyword[],
+  targetKeyword: string
+): Record<string, unknown>[] {
+  const lower = targetKeyword.toLowerCase();
+  const related = keywords.filter((k) =>
+    k.keyword.toLowerCase().includes(lower) || lower.includes(k.keyword.toLowerCase())
+  );
+  const selected = related.length >= 3 ? related : keywords;
+  return selected
+    .sort((a, b) => b.searchVolume - a.searchVolume)
+    .slice(0, 10)
+    .map((k) => ({
+      keyword: k.keyword,
+      search_volume: k.searchVolume,
+      ad_position: k.adPosition,
+      difficulty: k.keywordDifficulty,
+      advertisers: k.adCount,
+    }));
+}
+
+/**
  * Summarize Frase SERP analysis to keep prompt size manageable.
  * Extracts top-ranking page titles, word counts, headings, and key topics.
  */
@@ -168,7 +281,7 @@ function extractSemanticKeywords(data: Record<string, unknown>): string[] | null
 }
 
 export async function generateBrief(options: GenerateBriefOptions): Promise<ContentBrief> {
-  const { clientId, targetKeyword, contentType = "blog_post" } = options;
+  const { clientId, targetKeyword, contentType = "blog_post", briefType, pagePath } = options;
   const supabase = await createClient();
 
   // Fetch client data
@@ -223,6 +336,79 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     ? extractSemanticKeywords(semanticResult.value as Record<string, unknown>)
     : null;
 
+  // Fetch enrichment data — all optional, failures never block generation
+  let existingPageData: Record<string, unknown> | null = null;
+  let pageKeywordsData: Record<string, unknown>[] | null = null;
+  let cannibalizationData: Record<string, unknown>[] | null = null;
+  let keywordGapData: Record<string, unknown>[] | null = null;
+  let ppcData: Record<string, unknown>[] | null = null;
+
+  const enrichmentPromises: Promise<unknown>[] = [
+    // Existing page data (only if pagePath provided)
+    pagePath
+      ? Promise.resolve(
+          supabase
+            .from("content_pages")
+            .select("*")
+            .eq("client_id", clientId)
+            .eq("page_path", pagePath)
+            .limit(1)
+            .single()
+        ).then(({ data }) => data)
+      : Promise.resolve(null),
+    // Page keywords (only if pagePath provided)
+    pagePath
+      ? getContentPageKeywords(clientId, pagePath)
+      : Promise.resolve(null),
+    // Cannibalization groups
+    getCannibalizationGroups(clientId),
+    // Keyword gaps
+    getKeywordGaps(clientId),
+    // SpyFu PPC keywords
+    client.domain
+      ? spyFu.getPpcKeywords(client.domain, clientId, 50).then((r) => r?.results ?? [])
+      : Promise.resolve([]),
+  ];
+
+  const enrichmentResults = await Promise.allSettled(enrichmentPromises);
+
+  if (enrichmentResults[0].status === "fulfilled" && enrichmentResults[0].value) {
+    existingPageData = summarizeExistingPage(enrichmentResults[0].value as ContentPage);
+  } else if (enrichmentResults[0].status === "rejected") {
+    logger.warn("Enrichment: existing page fetch failed", { error: enrichmentResults[0].reason });
+  }
+
+  if (enrichmentResults[1].status === "fulfilled" && enrichmentResults[1].value) {
+    const kws = enrichmentResults[1].value as ContentPageKeyword[];
+    if (kws.length > 0) pageKeywordsData = summarizePageKeywords(kws);
+  } else if (enrichmentResults[1].status === "rejected") {
+    logger.warn("Enrichment: page keywords fetch failed", { error: enrichmentResults[1].reason });
+  }
+
+  if (enrichmentResults[2].status === "fulfilled" && enrichmentResults[2].value) {
+    const groups = enrichmentResults[2].value as CannibalizationGroup[];
+    const summarized = summarizeCannibalization(groups, targetKeyword);
+    if (summarized.length > 0) cannibalizationData = summarized;
+  } else if (enrichmentResults[2].status === "rejected") {
+    logger.warn("Enrichment: cannibalization fetch failed", { error: enrichmentResults[2].reason });
+  }
+
+  if (enrichmentResults[3].status === "fulfilled" && enrichmentResults[3].value) {
+    const gaps = enrichmentResults[3].value as KeywordGapOpportunity[];
+    const summarized = summarizeKeywordGaps(gaps, targetKeyword);
+    if (summarized.length > 0) keywordGapData = summarized;
+  } else if (enrichmentResults[3].status === "rejected") {
+    logger.warn("Enrichment: keyword gaps fetch failed", { error: enrichmentResults[3].reason });
+  }
+
+  if (enrichmentResults[4].status === "fulfilled" && enrichmentResults[4].value) {
+    const ppc = enrichmentResults[4].value as SpyFuPpcKeyword[];
+    const summarized = summarizePpcData(ppc, targetKeyword);
+    if (summarized.length > 0) ppcData = summarized;
+  } else if (enrichmentResults[4].status === "rejected") {
+    logger.warn("Enrichment: PPC keywords fetch failed", { error: enrichmentResults[4].reason });
+  }
+
   const prompt = buildBriefGenerationPrompt({
     clientName: client.name,
     clientDomain: client.domain,
@@ -235,6 +421,12 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     contentType,
     serpAnalysis,
     semanticKeywords: fraseSemanticKeywords,
+    briefType,
+    existingPage: existingPageData,
+    pageKeywords: pageKeywordsData,
+    cannibalizationData,
+    keywordGapData,
+    ppcData,
   });
 
   const result = await generateWithClaude({
@@ -272,7 +464,14 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
         briefData.semantic_keywords as string[] | null,
       ),
       priority_level: briefData.priority_level as string || "medium",
-      competitive_gap_analysis: briefData.competitive_gap_analysis || null,
+      competitive_gap_analysis: {
+        ...(briefData.competitive_gap_analysis as Record<string, unknown> || {}),
+        ...(existingPageData ? { existing_page: existingPageData } : {}),
+        ...(pageKeywordsData ? { page_keywords: pageKeywordsData } : {}),
+        ...(cannibalizationData ? { cannibalization: cannibalizationData } : {}),
+        ...(keywordGapData ? { keyword_gaps: keywordGapData } : {}),
+        ...(ppcData ? { ppc_keywords: ppcData } : {}),
+      },
       ai_citation_opportunity_data: briefData.ai_citation_opportunity_data || null,
       client_voice_profile: client.brand_voice || null,
     })

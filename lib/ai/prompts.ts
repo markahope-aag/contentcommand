@@ -10,6 +10,12 @@ interface BriefGenerationInput {
   contentType?: string;
   serpAnalysis?: Record<string, unknown> | null;
   semanticKeywords?: string[] | null;
+  briefType?: "optimization" | "refresh" | "consolidation" | "new" | "thin" | "opportunity" | "decaying" | "authority";
+  existingPage?: Record<string, unknown> | null;
+  pageKeywords?: Record<string, unknown>[] | null;
+  cannibalizationData?: Record<string, unknown>[] | null;
+  keywordGapData?: Record<string, unknown>[] | null;
+  ppcData?: Record<string, unknown>[] | null;
 }
 
 interface ContentGenerationInput {
@@ -64,6 +70,41 @@ export function buildBriefGenerationPrompt(input: BriefGenerationInput): string 
     ? `\n## Semantic Keywords (Frase)\nData-driven related keywords to include:\n${input.semanticKeywords.join(", ")}`
     : "";
 
+  const briefTypeGuidance: Record<string, string> = {
+    optimization: "This is an OPTIMIZATION brief for an existing page. Focus on improving what already exists — better keyword targeting, expanded sections, improved authority signals. Do NOT suggest creating entirely new content; instead suggest specific improvements to the existing page.",
+    refresh: "This is a REFRESH brief for content that needs updating. Review the existing page data and identify what information is outdated, what new developments should be added, and how the content structure can be modernized to match current SERP expectations.",
+    decaying: "This is a DECAYING CONTENT brief. This page is actively losing traffic and/or rankings. The goal is to stop the decline and restore positive growth momentum. Analyze the existing page metrics to understand the severity of decay, identify what has changed in the competitive landscape since the page was performing well, and recommend specific updates — new sections, updated statistics, improved keyword targeting, better internal linking — that will reverse the decline.",
+    thin: "This is a THIN CONTENT brief. This page has insufficient depth or word count to rank competitively. The goal is to substantially expand the article with authoritative, comprehensive coverage. Identify what subtopics, frameworks, case studies, and data points should be added to transform this from a thin page into a definitive resource. Recommend a target word count at least 2-3x the current length.",
+    opportunity: "This is an OPPORTUNITY brief. This page has high impressions but low clicks/CTR, meaning it appears in search results but isn't compelling enough to earn clicks. Focus on improving the title tag, meta description, and opening content to increase click-through rate. Also recommend content improvements that would push rankings from page 2 into page 1 positions.",
+    consolidation: "This is a CONSOLIDATION brief. Multiple pages are competing for the same keyword (cannibalization). Recommend which page should be the canonical target, what content from other pages should be merged in, and which pages should be redirected.",
+    new: "This is a NEW content brief. No existing page covers this topic. Focus on creating something that fills a gap in the client's content portfolio.",
+    authority: "This is a DOMAIN AUTHORITY brief. The goal is to build topical authority within an existing content cluster. Create a comprehensive, authoritative piece that strengthens the client's expertise signals for this topic area. Focus on depth, E-E-A-T signals, internal linking to related cluster content, and covering subtopics that establish the client as the definitive resource. Reference and link to the client's existing content on related topics.",
+  };
+
+  const briefTypeSection = input.briefType
+    ? `\n## Brief Type: ${input.briefType.toUpperCase()}\n${briefTypeGuidance[input.briefType] || briefTypeGuidance.new}`
+    : "";
+
+  const existingPageSection = input.existingPage
+    ? `\n## Existing Page Performance\nCurrent metrics for the page being optimized:\n${JSON.stringify(input.existingPage, null, 2)}`
+    : "";
+
+  const pageKeywordsSection = input.pageKeywords?.length
+    ? `\n## Current Page Keywords\nKeywords this page already ranks for (preserve and strengthen these):\n${JSON.stringify(input.pageKeywords, null, 2)}`
+    : "";
+
+  const cannibalizationSection = input.cannibalizationData?.length
+    ? `\n## Cannibalization Risk\nThese keywords have multiple competing pages on the same domain:\n${JSON.stringify(input.cannibalizationData, null, 2)}`
+    : "";
+
+  const keywordGapSection = input.keywordGapData?.length
+    ? `\n## Competitor Keyword Gaps\nKeywords competitors rank for but the client does not — high-value content opportunities:\n${JSON.stringify(input.keywordGapData, null, 2)}`
+    : "";
+
+  const ppcSection = input.ppcData?.length
+    ? `\n## PPC Commercial Intent\nKeywords competitors are paying for in Google Ads — indicates high commercial value:\n${JSON.stringify(input.ppcData, null, 2)}`
+    : "";
+
   return `You are a strategic content intelligence analyst. Generate a comprehensive content brief for the following:
 
 ## Client
@@ -78,13 +119,19 @@ ${input.targetKeyword}
 
 ## Content Type
 ${input.contentType || "blog_post"}
+${briefTypeSection}
 ${serpAnalysisSection}
 ${fraseKeywordsSection}
 ${competitiveSection}
 ${citationSection}
+${existingPageSection}
+${pageKeywordsSection}
+${cannibalizationSection}
+${keywordGapSection}
+${ppcSection}
 
 ## Instructions
-Analyze the SERP data, semantic keywords, competitive landscape, and AI citation opportunities to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy.
+Analyze ALL available data — SERP analysis, semantic keywords, competitive landscape, AI citation opportunities, existing page performance, current page keywords, cannibalization risks, keyword gaps, and PPC commercial intent — to create a detailed content brief. Use the Frase SERP analysis to understand what top-ranking content covers, identify gaps, and determine the optimal content structure. Incorporate the semantic keywords into your recommended sections and keyword strategy. Factor in existing page data to preserve ranking signals and avoid cannibalization. Use PPC data to identify high-commercial-value angles.
 
 The final article will be a long-form editorial written like a Harvard Business Review piece — flowing paragraphs with concrete data, named frameworks (SWOT, PESTLE, etc.), comparison tables, case studies, and authoritative source citations. It will have Key Takeaways at the top and an FAQ section at the bottom. Design the required_sections accordingly — each section should be a topic area that will contain 3-5 paragraphs of substantive, specific analysis with at least one rich content element (table, framework, case study, or expert quote). Sections should NOT be list headings.
 
