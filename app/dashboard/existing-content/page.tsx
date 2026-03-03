@@ -144,7 +144,7 @@ export default async function ExistingContentPage({ searchParams }: PageProps) {
         <TabsContent value="top-performers" className="space-y-6">
           <ContentPagesTable
             pages={topPerformersResult.data}
-            count={topPerformersResult.count}
+            count={topPerformersResult.data.length}
             title="Top Performers"
             clientId={clientId}
           />
