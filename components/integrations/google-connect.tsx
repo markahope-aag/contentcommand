@@ -21,9 +21,14 @@ export function GoogleConnect({
   clients,
   connectedClientIds,
 }: GoogleConnectProps) {
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedClient, setSelectedClient] = useState<string>(
+    connectedClientIds[0] || clients[0]?.id || ""
+  );
   const [connecting, setConnecting] = useState(false);
+  const [testing, setTesting] = useState(false);
   const { toast } = useToast();
+
+  const isConnected = connectedClientIds.includes(selectedClient);
 
   const handleConnect = async () => {
     if (!selectedClient) return;
@@ -54,6 +59,31 @@ export function GoogleConnect({
     }
   };
 
+  const handleTestConnection = async () => {
+    setTesting(true);
+    try {
+      const response = await fetch("/api/integrations/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "google" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Test failed");
+
+      if (data.status === "healthy") {
+        toast({ title: "Google connected", description: `Response time: ${data.responseTimeMs}ms` });
+      } else {
+        toast({ title: "Google connection failed", description: data.error || "Could not verify connection", variant: "destructive" });
+      }
+
+      window.location.reload();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Test failed";
+      toast({ title: "Google connection failed", description: message, variant: "destructive" });
+      setTesting(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="space-y-2">
@@ -71,17 +101,27 @@ export function GoogleConnect({
           </SelectContent>
         </Select>
       </div>
-      <LoadingButton
-        size="sm"
-        onClick={handleConnect}
-        loading={connecting}
-        loadingText="Connecting..."
-        disabled={!selectedClient}
-      >
-        {connectedClientIds.includes(selectedClient)
-          ? "Reconnect Google"
-          : "Connect Google"}
-      </LoadingButton>
+      <div className="flex gap-2">
+        <LoadingButton
+          size="sm"
+          variant={isConnected ? "outline" : "default"}
+          onClick={handleConnect}
+          loading={connecting}
+          loadingText="Connecting..."
+          disabled={!selectedClient}
+        >
+          {isConnected ? "Reconnect" : "Connect Google"}
+        </LoadingButton>
+        <LoadingButton
+          size="sm"
+          variant="outline"
+          onClick={handleTestConnection}
+          loading={testing}
+          loadingText="Testing..."
+        >
+          Test Connection
+        </LoadingButton>
+      </div>
     </div>
   );
 }

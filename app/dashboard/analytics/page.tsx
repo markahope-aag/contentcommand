@@ -15,10 +15,7 @@ import {
 } from "@/lib/supabase/queries";
 
 function ScoreBar({ label, score }: { label: string; score: number }) {
-  const color =
-    score >= 80 ? "bg-green-500" :
-    score >= 60 ? "bg-yellow-500" :
-    score >= 40 ? "bg-orange-500" : "bg-red-500";
+  const color = score >= 70 ? "bg-green-500" : "bg-red-500";
 
   return (
     <div className="space-y-1">

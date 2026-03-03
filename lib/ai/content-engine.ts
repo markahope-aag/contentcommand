@@ -5,7 +5,6 @@ import { generateWithOpenAI } from "./openai-client";
 import { analyzeContentQuality } from "./quality-analyzer";
 import { buildBriefGenerationPrompt, buildContentGenerationPrompt, SYSTEM_PROMPTS } from "./prompts";
 import { frase } from "@/lib/integrations/frase";
-import { logger } from "@/lib/logger";
 import type {
   ContentBrief,
   GeneratedContent,
@@ -180,13 +179,20 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     .single();
   if (clientError || !client) throw new Error("Client not found");
 
-  // Fetch competitive analysis
-  const { data: competitiveData } = await supabase
+  // Fetch competitive analysis — required for quality content
+  const { data: competitiveData, error: compError } = await supabase
     .from("competitive_analysis")
     .select("*")
     .eq("client_id", clientId)
     .gt("expires_at", new Date().toISOString())
     .limit(5);
+
+  if (compError) {
+    throw new Error(`Failed to fetch competitive analysis: ${compError.message}`);
+  }
+  if (!competitiveData?.length) {
+    throw new Error("No competitive analysis data available. Run a competitive analysis on the Competitive Intelligence page before generating content.");
+  }
 
   // Fetch AI citations
   const { data: citationData } = await supabase
@@ -197,30 +203,25 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
     .limit(10);
 
   // Fetch Frase SERP analysis and semantic keywords in parallel
-  let serpAnalysis: Record<string, unknown> | null = null;
-  let fraseSemanticKeywords: string[] | null = null;
+  // All integrations are required — fail fast if any are unavailable
+  const [serpResult, semanticResult] = await Promise.allSettled([
+    frase.analyzeSerp(targetKeyword, clientId),
+    frase.getSemanticKeywords(targetKeyword, clientId),
+  ]);
 
-  try {
-    const [serpResult, semanticResult] = await Promise.allSettled([
-      frase.analyzeSerp(targetKeyword, clientId),
-      frase.getSemanticKeywords(targetKeyword, clientId),
-    ]);
-
-    if (serpResult.status === "fulfilled" && serpResult.value) {
-      const serpData = serpResult.value as Record<string, unknown>;
-      // Summarize SERP data to keep prompt size reasonable
-      serpAnalysis = summarizeSerpAnalysis(serpData);
-    }
-
-    if (semanticResult.status === "fulfilled" && semanticResult.value) {
-      const semData = semanticResult.value as Record<string, unknown>;
-      // Extract keyword strings from Frase response
-      fraseSemanticKeywords = extractSemanticKeywords(semData);
-    }
-  } catch (err) {
-    // Frase is enrichment — don't fail the brief if it's unavailable
-    logger.warn("Frase enrichment failed during brief generation", { error: err as Error });
+  if (serpResult.status === "rejected") {
+    throw new Error(`Frase SERP analysis failed: ${serpResult.reason?.message || serpResult.reason}. Fix the integration before generating content.`);
   }
+  if (semanticResult.status === "rejected") {
+    throw new Error(`Frase semantic keywords failed: ${semanticResult.reason?.message || semanticResult.reason}. Fix the integration before generating content.`);
+  }
+
+  const serpAnalysis = serpResult.value
+    ? summarizeSerpAnalysis(serpResult.value as Record<string, unknown>)
+    : null;
+  const fraseSemanticKeywords = semanticResult.value
+    ? extractSemanticKeywords(semanticResult.value as Record<string, unknown>)
+    : null;
 
   const prompt = buildBriefGenerationPrompt({
     clientName: client.name,
@@ -310,36 +311,42 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     .eq("id", briefId);
 
   // Enrich with fresh Frase SERP data for content generation
+  // All integrations are required — fail fast if unavailable
   let serpContentAnalysis = brief.serp_content_analysis;
   let semanticKeywords = brief.semantic_keywords;
 
-  try {
-    const [serpResult, semanticResult] = await Promise.allSettled([
-      frase.analyzeSerp(brief.target_keyword, resolvedClientId),
-      !semanticKeywords?.length
-        ? frase.getSemanticKeywords(brief.target_keyword, resolvedClientId)
-        : Promise.resolve(null),
-    ]);
+  const [serpResult, semanticResult] = await Promise.allSettled([
+    frase.analyzeSerp(brief.target_keyword, resolvedClientId),
+    !semanticKeywords?.length
+      ? frase.getSemanticKeywords(brief.target_keyword, resolvedClientId)
+      : Promise.resolve(null),
+  ]);
 
-    if (serpResult.status === "fulfilled" && serpResult.value) {
-      const serpData = summarizeSerpAnalysis(serpResult.value as Record<string, unknown>);
-      serpContentAnalysis = JSON.stringify(serpData);
-    }
+  if (serpResult.status === "rejected") {
+    // Reset brief status since generation failed before starting
+    await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
+    throw new Error(`Frase SERP analysis failed: ${serpResult.reason?.message || serpResult.reason}. Fix the integration before generating content.`);
+  }
+  if (semanticResult.status === "rejected") {
+    await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
+    throw new Error(`Frase semantic keywords failed: ${semanticResult.reason?.message || semanticResult.reason}. Fix the integration before generating content.`);
+  }
 
-    if (semanticResult.status === "fulfilled" && semanticResult.value) {
-      const fraseKeywords = extractSemanticKeywords(semanticResult.value as Record<string, unknown>);
-      if (fraseKeywords?.length) {
-        // Merge Frase keywords with any existing ones, deduplicating
-        const existing = new Set((semanticKeywords || []).map((k: string) => k.toLowerCase()));
-        const merged = [...(semanticKeywords || [])];
-        for (const kw of fraseKeywords) {
-          if (!existing.has(kw.toLowerCase())) merged.push(kw);
-        }
-        semanticKeywords = merged;
+  if (serpResult.value) {
+    const serpData = summarizeSerpAnalysis(serpResult.value as Record<string, unknown>);
+    serpContentAnalysis = JSON.stringify(serpData);
+  }
+
+  if (semanticResult.value) {
+    const fraseKeywords = extractSemanticKeywords(semanticResult.value as Record<string, unknown>);
+    if (fraseKeywords?.length) {
+      const existing = new Set((semanticKeywords || []).map((k: string) => k.toLowerCase()));
+      const merged = [...(semanticKeywords || [])];
+      for (const kw of fraseKeywords) {
+        if (!existing.has(kw.toLowerCase())) merged.push(kw);
       }
+      semanticKeywords = merged;
     }
-  } catch (err) {
-    logger.warn("Frase enrichment failed during content generation", { error: err as Error });
   }
 
   const prompt = buildContentGenerationPrompt({

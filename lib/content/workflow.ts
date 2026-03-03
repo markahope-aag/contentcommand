@@ -1,6 +1,45 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { invalidateCache } from "@/lib/cache";
 
+export const QUALITY_THRESHOLDS = {
+  overall_score: 80,
+  seo_score: 70,
+  readability_score: 70,
+  authority_score: 70,
+  engagement_score: 70,
+  aeo_score: 70,
+} as const;
+
+export interface QualityGateResult {
+  passed: boolean;
+  failures: { category: string; score: number; minimum: number }[];
+}
+
+export function checkQualityGate(scores: {
+  overall_score: number | null;
+  seo_score: number | null;
+  readability_score: number | null;
+  authority_score: number | null;
+  engagement_score: number | null;
+  aeo_score: number | null;
+}): QualityGateResult {
+  const failures: QualityGateResult["failures"] = [];
+
+  for (const [key, minimum] of Object.entries(QUALITY_THRESHOLDS)) {
+    const score = scores[key as keyof typeof QUALITY_THRESHOLDS] ?? 0;
+    if (score < minimum) {
+      const label = key === "overall_score" ? "Overall" :
+        key === "seo_score" ? "SEO" :
+        key === "readability_score" ? "Readability" :
+        key === "authority_score" ? "Authority" :
+        key === "engagement_score" ? "Engagement" : "AEO";
+      failures.push({ category: label, score, minimum });
+    }
+  }
+
+  return { passed: failures.length === 0, failures };
+}
+
 export type BriefStatus =
   | "draft"
   | "approved"
@@ -84,6 +123,29 @@ interface ReviewSubmission {
 
 export async function submitReview(submission: ReviewSubmission): Promise<void> {
   const admin = createAdminClient();
+
+  // Enforce quality gate on approval
+  if (submission.action === "approve") {
+    const { data: analysis } = await admin
+      .from("content_quality_analysis")
+      .select("overall_score, seo_score, readability_score, authority_score, engagement_score, aeo_score")
+      .eq("content_id", submission.contentId)
+      .order("analyzed_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!analysis) {
+      throw new Error("Content must be scored before it can be approved. Run quality scoring first.");
+    }
+
+    const gate = checkQualityGate(analysis);
+    if (!gate.passed) {
+      const details = gate.failures
+        .map((f) => `${f.category}: ${f.score}/${f.minimum}`)
+        .join(", ");
+      throw new Error(`Content does not meet quality thresholds: ${details}`);
+    }
+  }
 
   const updates: Record<string, unknown> = {
     reviewed_at: new Date().toISOString(),

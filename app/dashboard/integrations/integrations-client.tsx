@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { ProviderCard } from "@/components/integrations/provider-card";
 import { GoogleConnect } from "@/components/integrations/google-connect";
 import { SyncLogs } from "@/components/integrations/sync-logs";
@@ -45,37 +43,6 @@ export function IntegrationsClient({
   healthData,
   connectedGoogleClientIds,
 }: IntegrationsClientProps) {
-  const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const handleSync = async (provider: string) => {
-    if (!clients.length) return;
-
-    setSyncingProvider(provider);
-    try {
-      const response = await fetch("/api/integrations/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: clients[0].id,
-          provider,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || `Sync failed (${response.status})`);
-      }
-
-      toast({ title: "Sync complete", description: `${provider} data synced successfully.` });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : `Sync failed for ${provider}`;
-      toast({ title: "Sync failed", description: message, variant: "destructive" });
-    } finally {
-      setSyncingProvider(null);
-    }
-  };
-
   const getHealth = (provider: string) =>
     healthData.find((h) => h.provider === provider);
 
@@ -91,12 +58,6 @@ export function IntegrationsClient({
               provider={p.provider}
               description={p.description}
               health={getHealth(p.provider)}
-              onSync={
-                p.provider !== "google"
-                  ? () => handleSync(p.provider)
-                  : undefined
-              }
-              syncing={syncingProvider === p.provider}
             >
               {p.provider === "google" && (
                 <GoogleConnect

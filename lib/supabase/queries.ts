@@ -578,16 +578,37 @@ export async function getContentPipelineStats(clientId?: string): Promise<
 
 // ── Integration Health ──────────────────────────────────
 
+const ALL_PROVIDERS = ["dataforseo", "frase", "google", "llmrefs"] as const;
+
 export async function getIntegrationHealth(): Promise<IntegrationHealth[]> {
   return withCache("cc:integration-health:all", async () => {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("integration_health")
-      .select("*")
-      .order("provider");
+    const [{ data, error }, { data: googleTokens }] = await Promise.all([
+      supabase.from("integration_health").select("*").order("provider"),
+      supabase.from("google_oauth_tokens").select("client_id").limit(1),
+    ]);
 
     if (error) throw error;
-    return data;
+
+    const byProvider = new Map((data || []).map((h) => [h.provider, h]));
+    const googleConnected = (googleTokens || []).length > 0;
+
+    return ALL_PROVIDERS.map((provider) => {
+      const existing = byProvider.get(provider);
+      if (existing) return existing;
+
+      return {
+        id: `default-${provider}`,
+        provider,
+        status: provider === "google" && googleConnected ? "healthy" : "unknown",
+        last_success: null,
+        last_failure: null,
+        error_count: 0,
+        avg_response_ms: null,
+        metadata: null,
+        updated_at: new Date().toISOString(),
+      } as unknown as IntegrationHealth;
+    });
   }, 900);
 }
 

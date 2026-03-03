@@ -158,7 +158,7 @@ ${feedbackSection}
 ## ARTICLE STRUCTURE (follow this exactly)
 
 ### 1. Key Takeaways (immediately after the H1)
-A blockquote or callout box with 4-6 crisp, measurable bullet points (e.g., "Companies using X see 34% higher Y"). Each bullet must contain a specific number, timeframe, or named example. This is the ONLY place where a pure bullet list is acceptable.
+A bulleted list with no more than 6 crisp, measurable bullet points (e.g., "Companies using X see 34% higher Y"). Each bullet must contain a specific number, timeframe, or named example. This is the ONLY place where a pure bullet list is acceptable.
 
 ### 2. Introduction (2-3 paragraphs)
 Open with a surprising statistic, a concrete anecdote, or a provocative question — not a generic overview. Set context, state the thesis clearly, and preview what the reader will learn. End the introduction with a one-sentence thesis or promise statement.
@@ -305,7 +305,7 @@ Return a JSON object:
 
 ### Engagement Score
 - Opening hook is specific and compelling (statistic, anecdote, or provocative question — not a generic overview)
-- Key Takeaways section present near the top with 4-6 crisp, measurable bullet points
+- Key Takeaways section present near the top with no more than 6 crisp, measurable bullet points in a bulleted list
 - Rich content elements present: comparison tables, numbered frameworks, blockquotes with attribution, case study callouts
 - At least one markdown table in the article
 - Conclusion has a specific, actionable call-to-action

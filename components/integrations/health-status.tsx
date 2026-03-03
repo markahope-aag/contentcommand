@@ -19,35 +19,36 @@ const providerNames: Record<string, string> = {
   llmrefs: "LLMrefs",
 };
 
+const ALL_PROVIDERS = ["dataforseo", "frase", "llmrefs", "google"] as const;
+
 export function HealthStatus({ healthData }: HealthStatusProps) {
-  if (!healthData.length) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No health data available yet. Run a sync to start tracking.
-      </p>
-    );
-  }
+  const healthByProvider = new Map(healthData.map((h) => [h.provider, h]));
 
   return (
     <div className="flex flex-wrap gap-3">
-      {healthData.map((h) => (
-        <div
-          key={h.provider}
-          className="flex items-center gap-2 rounded-lg border px-3 py-2"
-        >
-          <span className="text-sm font-medium">
-            {providerNames[h.provider] || h.provider}
-          </span>
-          <Badge className={statusColors[h.status]} variant="outline">
-            {h.status}
-          </Badge>
-          {h.avg_response_ms && (
-            <span className="text-xs text-muted-foreground">
-              {h.avg_response_ms}ms
+      {ALL_PROVIDERS.map((provider) => {
+        const h = healthByProvider.get(provider);
+        const status = h?.status || "unknown";
+
+        return (
+          <div
+            key={provider}
+            className="flex items-center gap-2 rounded-lg border px-3 py-2"
+          >
+            <span className="text-sm font-medium">
+              {providerNames[provider]}
             </span>
-          )}
-        </div>
-      ))}
+            <Badge className={statusColors[status]} variant="outline">
+              {status}
+            </Badge>
+            {h?.avg_response_ms && (
+              <span className="text-xs text-muted-foreground">
+                {h.avg_response_ms}ms
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

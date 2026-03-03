@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { useToast } from "@/hooks/use-toast";
 import type { IntegrationHealth } from "@/types/database";
 
 interface ProviderCardProps {
@@ -11,9 +12,6 @@ interface ProviderCardProps {
   provider: string;
   description: string;
   health?: IntegrationHealth;
-  onSync?: () => void;
-  onConfigure?: () => void;
-  syncing?: boolean;
   children?: React.ReactNode;
 }
 
@@ -26,17 +24,63 @@ const statusColors: Record<string, string> = {
 
 export function ProviderCard({
   name,
+  provider,
   description,
   health,
-  onSync,
-  onConfigure,
-  syncing,
   children,
 }: ProviderCardProps) {
+  const [testing, setTesting] = useState(false);
+  const [lastSuccess, setLastSuccess] = useState("Never");
+  const { toast } = useToast();
+
   const status = health?.status || "unknown";
-  const lastSuccess = health?.last_success
-    ? new Date(health.last_success).toLocaleString()
-    : "Never";
+
+  useEffect(() => {
+    if (health?.last_success) {
+      setLastSuccess(new Date(health.last_success).toLocaleString());
+    }
+  }, [health?.last_success]);
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    try {
+      const response = await fetch("/api/integrations/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Test failed");
+      }
+
+      if (data.status === "healthy") {
+        toast({
+          title: `${name} connected`,
+          description: `Response time: ${data.responseTimeMs}ms`,
+        });
+      } else {
+        toast({
+          title: `${name} connection failed`,
+          description: data.error || "Could not reach the API",
+          variant: "destructive",
+        });
+      }
+
+      // Reload to refresh server-side health data across all sections
+      window.location.reload();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Test failed";
+      toast({
+        title: `${name} connection failed`,
+        description: message,
+        variant: "destructive",
+      });
+      setTesting(false);
+    }
+  };
 
   return (
     <Card>
@@ -55,18 +99,19 @@ export function ProviderCard({
           )}
         </div>
         {children}
-        <div className="flex gap-2 mt-3">
-          {onSync && (
-            <LoadingButton size="sm" onClick={onSync} loading={syncing} loadingText="Syncing...">
-              Sync Now
+        {!children && (
+          <div className="mt-3">
+            <LoadingButton
+              size="sm"
+              variant="outline"
+              onClick={handleTestConnection}
+              loading={testing}
+              loadingText="Testing..."
+            >
+              Test Connection
             </LoadingButton>
-          )}
-          {onConfigure && (
-            <Button size="sm" variant="outline" onClick={onConfigure}>
-              Configure
-            </Button>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

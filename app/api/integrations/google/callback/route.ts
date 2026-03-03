@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { googleAuth } from "@/lib/integrations/google";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { invalidateCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
@@ -21,6 +23,23 @@ export async function GET(request: NextRequest) {
     }
 
     await googleAuth.handleCallback(code, state);
+
+    // Update integration health for Google
+    const admin = createAdminClient();
+    await admin
+      .from("integration_health")
+      .upsert(
+        {
+          provider: "google",
+          status: "healthy",
+          last_success: new Date().toISOString(),
+          error_count: 0,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "provider" }
+      );
+
+    await invalidateCache("cc:integration-health:all");
 
     return NextResponse.redirect(
       new URL(
