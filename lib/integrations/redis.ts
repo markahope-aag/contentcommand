@@ -39,6 +39,7 @@ export function getRateLimiter(provider: string): Ratelimit {
       llmrefs: { requests: 10, window: "1 m" },
       claude: { requests: 50, window: "1 m" },
       openai: { requests: 50, window: "1 m" },
+      spyfu: { requests: 100, window: "1 m" },
     };
 
     const providerConfig = config[provider] || { requests: 60, window: "1 m" };

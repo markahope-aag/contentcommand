@@ -584,7 +584,7 @@ export async function getContentPipelineStats(clientId?: string): Promise<
 
 // ── Integration Health ──────────────────────────────────
 
-const ALL_PROVIDERS = ["dataforseo", "frase", "google", "llmrefs"] as const;
+const ALL_PROVIDERS = ["dataforseo", "frase", "google", "llmrefs", "spyfu"] as const;
 
 export async function getIntegrationHealth(): Promise<IntegrationHealth[]> {
   return withCache("cc:integration-health:all", async () => {

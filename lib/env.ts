@@ -41,6 +41,9 @@ const serverEnvSchema = z.object({
   // AI
   ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+
+  // SpyFu
+  SPYFU_API_KEY: z.string().min(1, "SPYFU_API_KEY is required"),
 });
 
 // ── Client env (always available) ───────────────────────
@@ -87,6 +90,7 @@ function validateServerEnv() {
     CRON_SECRET: process.env.CRON_SECRET,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    SPYFU_API_KEY: process.env.SPYFU_API_KEY,
   });
 
   if (!result.success) {

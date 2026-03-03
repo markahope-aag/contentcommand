@@ -6,16 +6,21 @@ import { KeywordGapTable } from "@/components/competitive/keyword-gap-table";
 import { CompetitiveTrendChart } from "@/components/competitive/competitive-trend-chart";
 import { CitationTracker } from "@/components/competitive/citation-tracker";
 import { OpportunityList } from "@/components/competitive/opportunity-list";
+import { PpcKeywordsTable } from "@/components/competitive/ppc-keywords-table";
+import { DomainHistoryChart } from "@/components/competitive/domain-history-chart";
 import { ClientSelector } from "./client-selector";
 import { RefreshButton } from "./refresh-button";
 import {
   getClients,
+  getClient,
   getCompetitiveSummary,
   getKeywordGaps,
   getTopOpportunities,
   getCompetitiveMetricsHistory,
   getAiCitations,
 } from "@/lib/supabase/queries";
+import { spyFu } from "@/lib/integrations/spyfu";
+import type { SpyFuDomainStatsEntry, SpyFuPpcKeyword } from "@/lib/integrations/spyfu";
 
 interface PageProps {
   searchParams: Promise<{ clientId?: string }>;
@@ -45,6 +50,9 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
     ? selectedClientId
     : clients[0].id;
 
+  const client = await getClient(clientId);
+  const domain = client?.domain || "";
+
   const [summary, gaps, opportunities, trafficHistory, keywordHistory, citations] =
     await Promise.all([
       getCompetitiveSummary(clientId),
@@ -54,6 +62,23 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
       getCompetitiveMetricsHistory(clientId, "keyword_count"),
       getAiCitations(clientId),
     ]);
+
+  // SpyFu data — fetched separately so failures don't break the page
+  let domainHistory: SpyFuDomainStatsEntry[] = [];
+  let ppcKeywords: SpyFuPpcKeyword[] = [];
+
+  if (domain) {
+    try {
+      const [statsResult, ppcResult] = await Promise.all([
+        spyFu.getDomainStats(domain, clientId),
+        spyFu.getPpcKeywords(domain, clientId, 50),
+      ]);
+      domainHistory = statsResult?.results ?? [];
+      ppcKeywords = ppcResult?.results ?? [];
+    } catch {
+      // SpyFu not configured or API error — continue without it
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -70,6 +95,7 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
       <Tabs defaultValue="keyword-gaps">
         <TabsList>
           <TabsTrigger value="keyword-gaps">Keyword Gaps</TabsTrigger>
+          <TabsTrigger value="ppc">PPC Intel</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
           <TabsTrigger value="citations">AI Citations</TabsTrigger>
           <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
@@ -79,7 +105,14 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
           <KeywordGapTable gaps={gaps.slice(0, 50)} />
         </TabsContent>
 
+        <TabsContent value="ppc" className="space-y-6">
+          <PpcKeywordsTable keywords={ppcKeywords} competitorDomain={domain} />
+        </TabsContent>
+
         <TabsContent value="trends" className="space-y-6">
+          {domainHistory.length > 0 && (
+            <DomainHistoryChart data={domainHistory} domain={domain} />
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CompetitiveTrendChart
               data={trafficHistory}
