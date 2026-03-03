@@ -767,48 +767,66 @@ export async function getKeywordGaps(
   const gaps: KeywordGapOpportunity[] = [];
   for (const row of data) {
     const rowData = row.data as Record<string, unknown>;
-    // DataForSEO wraps results: { tasks: [{ result: [{ items: [...] }] }] }
-    // Try the nested path first, then fall back to direct .items
-    let items: unknown[] | undefined;
-    const tasks = rowData?.tasks;
-    if (Array.isArray(tasks) && tasks.length > 0) {
-      const task = tasks[0] as Record<string, unknown>;
-      const results = task?.result;
-      if (Array.isArray(results) && results.length > 0) {
-        const result = results[0] as Record<string, unknown>;
-        if (Array.isArray(result?.items)) items = result.items as unknown[];
-      }
+
+    // DataForSEO domain_intersection stores response as an array element.
+    // The base `execute` unwraps tasks[0].result[0], but the result is stored
+    // as { "0": { items: [...], target1, target2, ... } } when the raw response
+    // was an array. Try: data["0"].items, data.items, then tasks path as fallback.
+    let container: Record<string, unknown> = rowData;
+    if (rowData?.["0"] && typeof rowData["0"] === "object") {
+      container = rowData["0"] as Record<string, unknown>;
     }
-    if (!items && Array.isArray(rowData?.items)) {
-      items = rowData.items as unknown[];
+
+    let items: unknown[] | undefined;
+    if (Array.isArray(container?.items)) {
+      items = container.items as unknown[];
+    }
+    // Fallback: tasks[0].result[0].items (in case execute didn't unwrap)
+    if (!items) {
+      const tasks = rowData?.tasks;
+      if (Array.isArray(tasks) && tasks.length > 0) {
+        const task = tasks[0] as Record<string, unknown>;
+        const results = task?.result;
+        if (Array.isArray(results) && results.length > 0) {
+          const result = results[0] as Record<string, unknown>;
+          if (Array.isArray(result?.items)) items = result.items as unknown[];
+        }
+      }
     }
     if (!items) continue;
 
+    // target1 = client domain, target2 = competitor domain
+    const competitorDomain = String(container?.target2 ?? "");
+
     for (const item of items) {
       const i = item as Record<string, unknown>;
-      // DataForSEO domain_intersection items have keyword_data.keyword_info
+
+      // DataForSEO domain_intersection item structure:
+      //   keyword_data.keyword, keyword_data.keyword_info.search_volume
+      //   first_domain_serp_element.rank_group  (client position)
+      //   second_domain_serp_element.rank_group (competitor position)
       const kwData = i.keyword_data as Record<string, unknown> | undefined;
       const kwInfo = kwData?.keyword_info as Record<string, unknown> | undefined;
-      const keyword = String(i.keyword ?? kwData?.keyword ?? "");
+      const keyword = String(kwData?.keyword ?? i.keyword ?? "");
       if (!keyword) continue;
 
-      // Intersection items store per-domain data in intersection_result
-      const intersection = i.intersection_result as Record<string, unknown> | undefined;
+      const firstSerp = i.first_domain_serp_element as Record<string, unknown> | undefined;
+      const secondSerp = i.second_domain_serp_element as Record<string, unknown> | undefined;
 
       gaps.push({
         keyword,
-        client_position: i.client_position != null
-          ? Number(i.client_position)
-          : null,
-        competitor_position: i.competitor_position != null
-          ? Number(i.competitor_position)
-          : intersection?.relative_rank != null
-            ? Number(intersection.relative_rank)
-            : null,
-        competitor_domain: String(i.competitor_domain ?? rowData?.competitor_domain ?? ""),
+        client_position: firstSerp?.rank_group != null
+          ? Number(firstSerp.rank_group)
+          : i.client_position != null ? Number(i.client_position) : null,
+        competitor_position: secondSerp?.rank_group != null
+          ? Number(secondSerp.rank_group)
+          : i.competitor_position != null ? Number(i.competitor_position) : null,
+        competitor_domain: competitorDomain || String(i.competitor_domain ?? ""),
         competitor_id: row.competitor_id ?? "",
-        search_volume: Number(i.search_volume ?? kwInfo?.search_volume ?? 0),
-        difficulty: Number(i.difficulty ?? kwInfo?.competition ?? 0),
+        search_volume: Number(kwInfo?.search_volume ?? i.search_volume ?? 0),
+        difficulty: kwInfo?.competition != null
+          ? Math.round(Number(kwInfo.competition) * 100)
+          : Number(i.difficulty ?? 0),
       });
     }
   }
