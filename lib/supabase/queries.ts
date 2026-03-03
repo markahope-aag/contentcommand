@@ -838,15 +838,25 @@ export async function getTopOpportunities(
   limit = 20
 ): Promise<KeywordGapOpportunity[]> {
   const allGaps = await getKeywordGaps(clientId);
+
   // Filter to gaps where competitor outranks the client
-  return allGaps
-    .filter((g) => {
-      if (g.competitor_position == null) return false;
-      // Client doesn't rank at all — clear opportunity
-      if (g.client_position == null) return true;
-      // Competitor ranks meaningfully better than client
-      return g.competitor_position < g.client_position;
-    })
+  const filtered = allGaps.filter((g) => {
+    if (g.competitor_position == null) return false;
+    if (g.client_position == null) return true;
+    return g.competitor_position < g.client_position;
+  });
+
+  // Deduplicate by keyword — keep the entry with the best (lowest) competitor position
+  const byKeyword = new Map<string, KeywordGapOpportunity>();
+  for (const g of filtered) {
+    const key = g.keyword.toLowerCase();
+    const existing = byKeyword.get(key);
+    if (!existing || (g.competitor_position ?? Infinity) < (existing.competitor_position ?? Infinity)) {
+      byKeyword.set(key, g);
+    }
+  }
+
+  return Array.from(byKeyword.values())
     .sort((a, b) => b.search_volume - a.search_volume)
     .slice(0, limit);
 }
