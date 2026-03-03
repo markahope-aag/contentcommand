@@ -70,15 +70,17 @@ export default async function CompetitiveIntelligencePage({ searchParams }: Page
   let ppcKeywords: SpyFuPpcKeyword[] = [];
 
   if (domain) {
-    try {
-      const [statsResult, ppcResult] = await Promise.all([
-        spyFu.getDomainStats(domain, clientId),
-        spyFu.getPpcKeywords(domain, clientId, 50),
-      ]);
-      domainHistory = statsResult?.results ?? [];
-      ppcKeywords = ppcResult?.results ?? [];
-    } catch {
-      // SpyFu not configured or API error — continue without it
+    const [statsSettled, ppcSettled] = await Promise.allSettled([
+      spyFu.getDomainStats(domain, clientId),
+      spyFu.getPpcKeywords(domain, clientId, 50),
+    ]);
+    if (statsSettled.status === "fulfilled") {
+      const results = statsSettled.value?.results;
+      if (Array.isArray(results)) domainHistory = results;
+    }
+    if (ppcSettled.status === "fulfilled") {
+      const results = ppcSettled.value?.results;
+      if (Array.isArray(results)) ppcKeywords = results;
     }
   }
 

@@ -53,23 +53,23 @@ export function PpcKeywordsTable({ keywords, competitorDomain, clientId }: PpcKe
                     {kw.keyword}
                   </td>
                   <td className="py-2 pr-4 text-right">
-                    {kw.searchVolume.toLocaleString()}
+                    {(kw.searchVolume ?? 0).toLocaleString()}
                   </td>
                   <td className="py-2 pr-4 text-right">
-                    {kw.adPosition}
+                    {kw.adPosition ?? "—"}
                   </td>
                   <td className="py-2 pr-4 text-right">
                     <Badge
                       variant={
-                        kw.keywordDifficulty > 70 ? "destructive" :
-                        kw.keywordDifficulty > 40 ? "secondary" : "outline"
+                        (kw.keywordDifficulty ?? 0) > 70 ? "destructive" :
+                        (kw.keywordDifficulty ?? 0) > 40 ? "secondary" : "outline"
                       }
                     >
-                      {kw.keywordDifficulty}
+                      {kw.keywordDifficulty ?? "—"}
                     </Badge>
                   </td>
                   <td className="py-2 pr-4 text-right">
-                    {kw.adCount}
+                    {kw.adCount ?? "—"}
                   </td>
                   <td className="py-2">
                     <Button asChild variant="ghost" size="sm">
