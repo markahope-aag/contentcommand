@@ -318,7 +318,24 @@ export async function syncExistingContent(
       }
     }
 
-    // 10. Update sync record
+    // 10. Write GSC metrics to competitive_metrics_history for trend charts
+    const totalClicks = pageRows.reduce((sum, p) => sum + (p.clicks as number), 0);
+    const totalImpressions = pageRows.reduce((sum, p) => sum + (p.impressions as number), 0);
+    const uniqueKeywords = new Set(keywordRows.map((k) => k.keyword)).size;
+
+    const historyRows = [
+      { client_id: clientId, metric_type: "organic_traffic", metric_value: totalClicks },
+      { client_id: clientId, metric_type: "organic_impressions", metric_value: totalImpressions },
+      { client_id: clientId, metric_type: "keyword_count", metric_value: uniqueKeywords },
+      { client_id: clientId, metric_type: "page_count", metric_value: pageRows.length },
+    ];
+
+    const { error: historyErr } = await admin.from("competitive_metrics_history").insert(historyRows);
+    if (historyErr) {
+      logger.warn("Failed to write metrics history", { error: historyErr });
+    }
+
+    // 11. Update sync record
     await admin
       .from("content_audit_syncs")
       .update({
