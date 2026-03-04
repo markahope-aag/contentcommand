@@ -207,6 +207,7 @@ export const testDataFactory = {
     revision_requests: null,
     reviewed_at: null,
     approved_at: null,
+    share_token: null,
     ...overrides,
   }),
 }

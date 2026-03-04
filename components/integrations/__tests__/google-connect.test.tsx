@@ -51,6 +51,10 @@ describe('GoogleConnect', () => {
       target_keywords: ['test', 'client'],
       brand_voice: null,
       org_id: 'org-1',
+      gsc_site_url: null,
+      ga4_property_id: null,
+      llmrefs_org_id: null,
+      llmrefs_project_id: null,
       created_at: '2024-01-01T00:00:00Z',
     },
     {
@@ -61,6 +65,10 @@ describe('GoogleConnect', () => {
       target_keywords: ['test', 'marketing'],
       brand_voice: null,
       org_id: 'org-1',
+      gsc_site_url: null,
+      ga4_property_id: null,
+      llmrefs_org_id: null,
+      llmrefs_project_id: null,
       created_at: '2024-01-02T00:00:00Z',
     },
   ]

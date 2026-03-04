@@ -7,6 +7,7 @@ import { QualityScoreDisplay } from "@/components/content/quality-score-display"
 import { ReviewPanel } from "@/components/content/review-panel";
 import { ContentDeleteButton } from "@/components/content/content-delete-button";
 import { RegenerateButton } from "@/components/content/regenerate-button";
+import { ShareButton } from "@/components/content/share-button";
 import { getGeneratedContent, getQualityAnalysis, getContentBrief } from "@/lib/supabase/queries";
 
 interface GenerationPageProps {
@@ -60,6 +61,7 @@ export default async function GenerationPage({ params }: GenerationPageProps) {
               </Link>
             </Button>
           )}
+          <ShareButton contentId={id} existingToken={content.share_token} />
           <ContentDeleteButton contentId={id} briefId={content.brief_id} />
         </div>
       </div>

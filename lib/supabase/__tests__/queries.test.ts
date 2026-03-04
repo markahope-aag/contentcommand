@@ -4,6 +4,7 @@
  * Tests query operations, caching, error handling, and data validation
  */
 
+import type { ClientInsert } from '@/types/database'
 import {
   getOrganizations,
   getOrganization,
@@ -304,12 +305,16 @@ describe('Database Queries', () => {
         const clientId = 'new-client-id'
         mockClient.rpc.mockResolvedValue(mockQueryResults.success(clientId))
 
-        const clientData = {
+        const clientData: ClientInsert = {
           name: 'Test Client',
           domain: 'test.com',
           industry: 'Tech',
           target_keywords: ['test'],
           brand_voice: { tone: 'professional' },
+          gsc_site_url: null,
+          ga4_property_id: null,
+          llmrefs_org_id: null,
+          llmrefs_project_id: null,
         }
 
         const result = await createClientWithOwner(clientData, 'org-id')

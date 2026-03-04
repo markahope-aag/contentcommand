@@ -105,6 +105,7 @@ export interface GeneratedContent {
   revision_requests: string[] | null;
   reviewed_at: string | null;
   approved_at: string | null;
+  share_token: string | null;
 }
 
 export interface PerformanceTracking {

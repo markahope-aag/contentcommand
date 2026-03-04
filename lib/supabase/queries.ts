@@ -1047,3 +1047,41 @@ export async function getLatestContentAuditSync(
   if (error && error.code !== "PGRST116") throw error;
   return data as ContentAuditSync | null;
 }
+
+// ── Share Tokens ────────────────────────────────────────
+
+export async function getContentByShareToken(token: string): Promise<GeneratedContent | null> {
+  const { createAdminClient } = await import("./admin");
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("generated_content")
+    .select("*")
+    .eq("share_token", token)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error;
+  return data as GeneratedContent | null;
+}
+
+export async function createShareToken(contentId: string): Promise<string> {
+  const { createAdminClient } = await import("./admin");
+  const admin = createAdminClient();
+
+  // Check if token already exists
+  const { data: existing } = await admin
+    .from("generated_content")
+    .select("share_token")
+    .eq("id", contentId)
+    .single();
+
+  if (existing?.share_token) return existing.share_token;
+
+  const token = crypto.randomUUID();
+  const { error } = await admin
+    .from("generated_content")
+    .update({ share_token: token })
+    .eq("id", contentId);
+
+  if (error) throw error;
+  return token;
+}
