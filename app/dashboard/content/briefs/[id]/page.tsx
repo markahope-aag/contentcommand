@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Sparkles } from "lucide-react";
 import { BriefDeleteButton } from "@/components/content/brief-delete-button";
 import { RegenerateButton } from "@/components/content/regenerate-button";
 import { getContentBrief, getGeneratedContentByBrief } from "@/lib/supabase/queries";
@@ -228,56 +226,9 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Generated Content</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {generatedContent.length === 0 ? (
-            <EmptyState
-              icon={Sparkles}
-              title="No content generated"
-              description="Approve this brief and generate AI-powered content from it."
-            />
-          ) : (
-            <div className="space-y-2">
-              {generatedContent.map((gc) => (
-                <Link
-                  key={gc.id}
-                  href={`/dashboard/content/generation/${gc.id}`}
-                  className="flex items-center justify-between p-3 rounded-md hover:bg-muted border"
-                >
-                  <div>
-                    <div className="text-sm font-medium">
-                      {gc.title || "Untitled"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {gc.word_count} words &middot; {gc.ai_model_used}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {gc.quality_score != null && (
-                      <Badge variant="secondary">
-                        Score: {gc.quality_score}
-                      </Badge>
-                    )}
-                    <Badge variant="outline">
-                      {gc.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="flex gap-2">
         {brief.status === "draft" && (
-          <BriefActionButton briefId={brief.id} action="approve" label="Approve Brief" />
-        )}
-        {brief.status === "approved" && (
-          <BriefActionButton briefId={brief.id} action="generate" label="Generate Content" />
+          <BriefActionButton briefId={brief.id} label="Approve Brief" />
         )}
         {showRegenerate && (
           <RegenerateButton briefId={brief.id} previousFeedback={previousFeedback} />
@@ -293,11 +244,9 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
 
 function BriefActionButton({
   briefId,
-  action,
   label,
 }: {
   briefId: string;
-  action: "approve" | "generate";
   label: string;
 }) {
   return (
@@ -308,29 +257,24 @@ function BriefActionButton({
         const { isRedirectError } = await import("next/dist/client/components/redirect");
 
         try {
-          if (action === "approve") {
-            const { createClient } = await import("@/lib/supabase/server");
-            const supabase = await createClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
+          const { createClient } = await import("@/lib/supabase/server");
+          const supabase = await createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error("Not authenticated");
 
-            const { approveBrief } = await import("@/lib/content/workflow");
-            await approveBrief(briefId, user.id);
-          } else {
-            const { generateContent } = await import("@/lib/ai/content-engine");
-            await generateContent({ briefId });
-          }
+          const { approveBrief } = await import("@/lib/content/workflow");
+          await approveBrief(briefId, user.id);
 
           redirect(`/dashboard/content/briefs/${briefId}`);
         } catch (error) {
           if (isRedirectError(error)) throw error;
           throw new Error(
-            `Failed to ${action === "approve" ? "approve brief" : "generate content"}: ${error instanceof Error ? error.message : "Unknown error"}`
+            `Failed to approve brief: ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
       }}
     >
-      <SubmitButton loadingText={action === "approve" ? "Approving..." : "Generating..."}>
+      <SubmitButton loadingText="Approving...">
         {label}
       </SubmitButton>
     </form>

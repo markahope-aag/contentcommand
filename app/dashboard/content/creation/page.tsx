@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { GenerateButton } from "@/components/content/generate-button";
+import { RegenerateButton } from "@/components/content/regenerate-button";
 import { getAllContentBriefs, getContentQueue } from "@/lib/supabase/queries";
 import { Sparkles, Loader2 } from "lucide-react";
 
@@ -75,11 +77,7 @@ export default async function ContentCreationPage() {
                       {brief.target_word_count} words
                     </div>
                   )}
-                  <Button size="sm" className="w-full" asChild>
-                    <Link href={`/dashboard/content/briefs/${brief.id}`}>
-                      Generate Content
-                    </Link>
-                  </Button>
+                  <GenerateButton briefId={brief.id} />
                 </CardContent>
               </Card>
             ))}
@@ -183,11 +181,9 @@ export default async function ContentCreationPage() {
                         View Brief
                       </Link>
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1" asChild>
-                      <Link href={`/dashboard/content/briefs/${brief.id}`}>
-                        Regenerate
-                      </Link>
-                    </Button>
+                    <div className="flex-1">
+                      <RegenerateButton briefId={brief.id} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
