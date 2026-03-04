@@ -138,6 +138,17 @@ Analyze ALL available data — SERP analysis, semantic keywords, competitive lan
 
 The final article will be a long-form editorial written like a Harvard Business Review piece — flowing paragraphs with concrete data, named frameworks (SWOT, PESTLE, etc.), comparison tables, case studies, and authoritative source citations. It will have Key Takeaways at the top and an FAQ section at the bottom. Design the required_sections accordingly — each section should be a topic area that will contain 3-5 paragraphs of substantive, specific analysis with at least one rich content element (table, framework, case study, or expert quote). Sections should NOT be list headings.
 
+## Target Word Count — CRITICAL
+Set target_word_count based on the SERP analysis data. Look at the word_count values of the top 5-10 ranking pages and calculate the competitive word count as follows:
+- Find the AVERAGE word count of the top 5 ranking pages
+- Set target_word_count to ~110% of that average (aim to be slightly more comprehensive than competitors)
+- MINIMUM: 1200 words (anything shorter lacks depth)
+- MAXIMUM: 4000 words (longer articles hit diminishing returns)
+- Round to the nearest 250 (e.g., 1250, 1500, 1750, 2000, 2250, etc.)
+- If no SERP word count data is available, default to 2000
+
+The number of required_sections should match: roughly 1 section per 350-400 words of target_word_count.
+
 Return your response as a JSON object with exactly these fields:
 
 {
@@ -145,10 +156,10 @@ Return your response as a JSON object with exactly these fields:
   "unique_angle": "What makes this content different from competitors",
   "competitive_gap": "Gaps in competitor content we can exploit",
   "target_audience": "Who this content is for",
-  "serp_content_analysis": "Analysis of current SERP content for this keyword",
+  "serp_content_analysis": "Analysis of current SERP content for this keyword — include the average word count of top-ranking pages and your reasoning for the chosen target_word_count",
   "authority_signals": "E-E-A-T signals to include",
   "controversial_positions": "Bold takes that differentiate this content",
-  "target_word_count": 1500,
+  "target_word_count": 2000,
   "required_sections": ["Section 1", "Section 2"],
   "semantic_keywords": ["related keyword 1", "related keyword 2"],
   "ai_citation_opportunity": "How to optimize for AI search citation",
@@ -236,7 +247,7 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
 - Title: ${input.briefTitle}
 - Target Keyword: ${input.targetKeyword}
 - Content Type: ${input.contentType}
-- Target Word Count: ${input.targetWordCount}
+- Target Word Count: ${input.targetWordCount} (HARD CEILING — do not exceed by more than 10%. This word count was calculated from SERP competitor analysis. Prioritize depth within this limit rather than padding length.)
 - Target Audience: ${input.targetAudience || "General audience"}
 - Unique Angle: ${input.uniqueAngle || "Not specified"}
 - Competitive Gap: ${input.competitiveGap || "Not specified"}
@@ -301,11 +312,16 @@ You MUST write ${Math.max(4, Math.ceil(input.targetWordCount / 400))} H2 body se
 - **Concrete case study callout** — company name, industry, specific challenge, action taken, measurable outcome with numbers, and timeframe (e.g., "Booz Allen Hamilton reduced its strategy-to-execution gap from 18 months to 6 months by implementing...")
 - **Sidebar insight** — format as a blockquote starting with "**Key Insight:**" or "**Industry Benchmark:**" containing a standalone citable fact
 
-**Minimum rich element distribution across the full article:**
-- At least 2 comparison tables (one MUST be a "Direct Comparison Table" early in the article)
+**Minimum rich element distribution across the full article (scale to word count):**
+${input.targetWordCount >= 2500
+    ? `- At least 2 comparison tables (one MUST be a "Direct Comparison Table" early in the article)
 - At least 2 named case studies with specific outcomes
 - At least 2 blockquotes (expert quotes or key insights)
-- At least 1 numbered framework/process
+- At least 1 numbered framework/process`
+    : `- At least 1 comparison table
+- At least 1 named case study with specific outcomes
+- At least 1 blockquote (expert quote or key insight)
+- At least 1 numbered framework/process`}
 
 **Specificity requirements (CRITICAL — score depends on this):**
 - NEVER write: "many companies", "significant improvement", "in recent years", "various factors", "some experts", "it is important to", "it is worth noting"
