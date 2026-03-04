@@ -35,9 +35,10 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
+    const message = error instanceof Error ? error.message : "Unknown error";
     logger.error("Brief generation error", { error: error as Error, route: "POST /api/content/briefs/generate" });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

@@ -18,7 +18,7 @@ export default async function ContentPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Content</h1>
+        <h1 className="text-3xl font-bold">Briefs</h1>
         <div className="flex gap-2">
           <Button asChild>
             <Link href="/dashboard/content/briefs/new">New Brief</Link>

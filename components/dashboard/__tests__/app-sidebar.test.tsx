@@ -66,7 +66,7 @@ describe('AppSidebar', () => {
     const expectedNavItems = [
       'Dashboard',
       'Clients', 
-      'Content',
+      'Briefs',
       'Analytics',
       'Integrations',
       'Settings'
@@ -119,7 +119,7 @@ describe('AppSidebar', () => {
     const expectedLinks = [
       { text: 'Dashboard', href: '/dashboard' },
       { text: 'Clients', href: '/dashboard/clients' },
-      { text: 'Content', href: '/dashboard/content' },
+      { text: 'Briefs', href: '/dashboard/content' },
       { text: 'Analytics', href: '/dashboard/analytics' },
       { text: 'Integrations', href: '/dashboard/integrations' },
       { text: 'Settings', href: '/dashboard/settings' },

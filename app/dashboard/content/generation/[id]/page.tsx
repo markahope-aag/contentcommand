@@ -74,7 +74,7 @@ export default async function GenerationPage({ params }: GenerationPageProps) {
       </div>
 
       <Button variant="outline" asChild>
-        <Link href="/dashboard/content">Back to Content</Link>
+        <Link href="/dashboard/content">Back to Briefs</Link>
       </Button>
     </div>
   );

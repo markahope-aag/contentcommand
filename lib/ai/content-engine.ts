@@ -224,25 +224,41 @@ function summarizePpcData(
 function summarizeSerpAnalysis(data: Record<string, unknown>): Record<string, unknown> {
   const summary: Record<string, unknown> = {};
 
-  // Frase SERP responses typically include results array with page analysis
-  if (Array.isArray(data.results)) {
-    summary.top_results = (data.results as Record<string, unknown>[]).slice(0, 10).map((r) => ({
+  // Frase process_serp returns items array with page analysis
+  const items = (Array.isArray(data.items) ? data.items : Array.isArray(data.results) ? data.results : null) as Record<string, unknown>[] | null;
+  if (items) {
+    summary.top_results = items.slice(0, 10).map((r) => ({
       title: r.title,
       url: r.url,
       word_count: r.word_count || r.wordCount,
-      headings: Array.isArray(r.headings) ? (r.headings as string[]).slice(0, 10) : undefined,
-      topics: Array.isArray(r.topics) ? (r.topics as string[]).slice(0, 10) : undefined,
+      headings: Array.isArray(r.assets)
+        ? (r.assets as Record<string, unknown>[]).slice(0, 10).map((a) => a.header).filter(Boolean)
+        : undefined,
+      questions: Array.isArray(r.questions) ? (r.questions as string[]).slice(0, 10) : undefined,
+      entities: Array.isArray(r.entities)
+        ? (r.entities as Record<string, unknown>[]).slice(0, 10).map((e) => e.name || e.text).filter(Boolean)
+        : undefined,
     }));
+
+    // Collect all questions across items
+    const allQuestions: string[] = [];
+    for (const item of items) {
+      if (Array.isArray(item.questions)) {
+        allQuestions.push(...(item.questions as string[]));
+      }
+    }
+    if (allQuestions.length > 0) {
+      summary.questions = Array.from(new Set(allQuestions)).slice(0, 20);
+    }
   }
 
-  // Extract average metrics if available
-  for (const key of ["avg_word_count", "avgWordCount", "topic_score", "topicScore", "questions"]) {
+  // Extract aggregate metrics if available
+  if (data.aggregate_metrics) summary.aggregate_metrics = data.aggregate_metrics;
+  if (data.cluster_info) summary.cluster_info = data.cluster_info;
+
+  // Legacy field support
+  for (const key of ["avg_word_count", "avgWordCount", "topic_score", "topicScore"]) {
     if (key in data) summary[key] = data[key];
-  }
-
-  // If Frase returns questions people ask
-  if (Array.isArray(data.questions)) {
-    summary.questions = (data.questions as string[]).slice(0, 10);
   }
 
   // Fallback: if structure is unexpected, take safe truncated snapshot
@@ -258,24 +274,28 @@ function summarizeSerpAnalysis(data: Record<string, unknown>): Record<string, un
  * Extract semantic keyword strings from Frase response.
  */
 function extractSemanticKeywords(data: Record<string, unknown>): string[] | null {
-  // Frase semantic endpoint returns keywords in various formats
-  if (Array.isArray(data.keywords)) {
-    return (data.keywords as Array<string | Record<string, unknown>>)
-      .slice(0, 50)
-      .map((k) => (typeof k === "string" ? k : (k.keyword as string) || (k.term as string) || ""))
-      .filter(Boolean);
+  const keywords = new Set<string>();
+
+  // Frase process_serp returns entities within each item
+  const items = (Array.isArray(data.items) ? data.items : Array.isArray(data.results) ? data.results : []) as Record<string, unknown>[];
+  for (const item of items) {
+    if (Array.isArray(item.entities)) {
+      for (const entity of item.entities as Record<string, unknown>[]) {
+        const name = (entity.name || entity.text || entity.keyword || entity.term) as string;
+        if (name) keywords.add(name);
+      }
+    }
   }
-  if (Array.isArray(data.results)) {
-    return (data.results as Array<string | Record<string, unknown>>)
-      .slice(0, 50)
-      .map((k) => (typeof k === "string" ? k : (k.keyword as string) || (k.term as string) || ""))
-      .filter(Boolean);
-  }
-  if (Array.isArray(data.terms)) {
-    return (data.terms as Array<string | Record<string, unknown>>)
-      .slice(0, 50)
-      .map((k) => (typeof k === "string" ? k : (k.term as string) || ""))
-      .filter(Boolean);
+  if (keywords.size > 0) return Array.from(keywords).slice(0, 50);
+
+  // Fallback: legacy formats
+  for (const key of ["keywords", "results", "terms"]) {
+    if (Array.isArray(data[key])) {
+      return (data[key] as Array<string | Record<string, unknown>>)
+        .slice(0, 50)
+        .map((k) => (typeof k === "string" ? k : (k.keyword as string) || (k.term as string) || ""))
+        .filter(Boolean);
+    }
   }
   return null;
 }

@@ -25,7 +25,7 @@ export default async function ReviewPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Review Queue</h1>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/content">Back to Content</Link>
+          <Link href="/dashboard/content">Back to Briefs</Link>
         </Button>
       </div>
 

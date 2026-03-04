@@ -1,7 +1,7 @@
 import { BaseAPIIntegration, APIError } from "./base";
 import { serverEnv } from "@/lib/env";
 
-const BASE_URL = "https://next.frase.io/api/v1";
+const BASE_URL = "https://api.frase.io/api/v1";
 
 const CACHE_TTLS = {
   serp_analysis: 43200, // 12h
@@ -21,7 +21,7 @@ export class FraseClient extends BaseAPIIntegration {
     const response = await fetch(url, {
       method: body ? "POST" : "GET",
       headers: {
-        "X-API-KEY": serverEnv().FRASE_API_KEY,
+        "token": serverEnv().FRASE_API_KEY,
         "Content-Type": "application/json",
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -40,28 +40,28 @@ export class FraseClient extends BaseAPIIntegration {
 
   async analyzeSerp(query: string, clientId?: string) {
     const cacheKey = `frase:serp:${query}`;
-    return this.execute("/serp/analyze", cacheKey, {
+    return this.execute("/process_serp", cacheKey, {
       clientId,
       cacheTtl: CACHE_TTLS.serp_analysis,
-      body: { keyword: query },
+      body: { query, count: 10, lang: "en", country: "us" },
     });
   }
 
   async analyzeUrl(url: string, clientId?: string) {
     const cacheKey = `frase:url:${url}`;
-    return this.execute("/serp/analyze", cacheKey, {
+    return this.execute("/process_serp", cacheKey, {
       clientId,
       cacheTtl: CACHE_TTLS.url_analysis,
-      body: { keyword: url },
+      body: { query: url, count: 10, lang: "en", country: "us" },
     });
   }
 
   async getSemanticKeywords(query: string, clientId?: string) {
     const cacheKey = `frase:semantic:${query}`;
-    return this.execute("/serp/analyze", cacheKey, {
+    return this.execute("/process_serp", cacheKey, {
       clientId,
       cacheTtl: CACHE_TTLS.serp_analysis,
-      body: { keyword: query },
+      body: { query, count: 10, lang: "en", country: "us" },
     });
   }
 }

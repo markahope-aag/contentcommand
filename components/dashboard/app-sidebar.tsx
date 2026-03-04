@@ -24,7 +24,7 @@ const navigation = [
   { name: "Clients", href: "/dashboard/clients", icon: "👥" },
   { name: "Existing Content", href: "/dashboard/existing-content", icon: "📄" },
   { name: "Competitive Intel", href: "/dashboard/competitive-intelligence", icon: "🎯" },
-  { name: "Content", href: "/dashboard/content", icon: "📝" },
+  { name: "Briefs", href: "/dashboard/content", icon: "📝" },
   { name: "Analytics", href: "/dashboard/analytics", icon: "📈" },
   { name: "Integrations", href: "/dashboard/integrations", icon: "🔌" },
   { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
