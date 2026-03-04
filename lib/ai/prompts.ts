@@ -275,7 +275,7 @@ Before optimizing for any search engine, the article must pass Google's people-f
 ## ARTICLE STRUCTURE (follow this exactly)
 
 ### 1. Key Takeaways (H2, immediately after the H1)
-A bulleted list with no more than 6 crisp, measurable bullet points. Each bullet MUST contain a specific number, dollar amount, percentage, timeframe, or named example (e.g., "Organizations adopting OODA-based decision cycles reduce strategic response time by 40%, according to McKinsey's 2024 Agility Report"). This is the ONLY section where a pure bullet list is acceptable. Do NOT reuse these exact phrasings anywhere else in the article.
+A standard markdown bulleted list (using \`- \` prefix, one item per line) with no more than 6 crisp, measurable bullet points. Each bullet MUST contain a specific number, dollar amount, percentage, timeframe, or named example (e.g., "Organizations adopting OODA-based decision cycles reduce strategic response time by 40%, according to McKinsey's 2024 Agility Report"). This is the ONLY section where a pure bullet list is acceptable. Do NOT reuse these exact phrasings anywhere else in the article. CRITICAL: Use standard markdown list syntax (\`- Item text\`), NOT blockquotes, NOT inline bullet characters (•), NOT a single paragraph. Each bullet point must be its own line starting with \`- \`.
 
 ### 2. Introduction (2-3 paragraphs)
 - Open with a surprising, SPECIFIC statistic with its source, a concrete named anecdote, or a provocative question grounded in data — never a generic overview like "In today's fast-paced business environment..."
@@ -581,6 +581,7 @@ Your content rules:
 4. SEMANTIC VARIETY: Never repeat the same theme verbatim across sections. Key Takeaways, body, and Conclusion use completely different vocabulary for overlapping ideas.
 5. ASSERTIVE: No hedging (often, can, sometimes, may, might). Use "research confirms", "data shows", "organizations that X achieve Y".
 6. STRUCTURED: H1→H2→H3 hierarchy, never skip levels. Each section self-contained for AI parsing. FAQ with 6-8 Q&A pairs.
+7. MARKDOWN LISTS: Always use standard markdown list syntax (- Item) with one item per line. Never use blockquotes for lists, never use inline bullet characters (•), never combine multiple list items into a single paragraph.
 Always return valid JSON.`,
   qualityScoring: `You are a rigorous content quality analyst who audits against professional GEO/AEO standards (Otterly.AI-level). You evaluate both Readiness Analysis (AI-readiness of prose) and Structured Data Analysis (AI-parseability of structure).
 

@@ -12,6 +12,20 @@ interface ContentEditorProps {
   content: GeneratedContent;
 }
 
+/**
+ * Fix malformed bullet lists where the AI used inline bullet characters (•)
+ * in a single paragraph or blockquote instead of proper markdown list syntax.
+ */
+function fixBulletLists(markdown: string): string {
+  return markdown.replace(
+    /^(>?\s*"?)([•●◦‣]\s*)/gm,
+    "$1- "
+  ).replace(
+    /([^\n])(\s*[•●◦‣]\s*)/g,
+    "$1\n- "
+  );
+}
+
 export function ContentEditor({ content }: ContentEditorProps) {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<"formatted" | "markdown">("formatted");
@@ -182,7 +196,7 @@ export function ContentEditor({ content }: ContentEditorProps) {
             className="prose prose-sm max-w-none dark:prose-invert p-4 rounded-md border"
           >
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {content.content || "No content generated yet."}
+              {fixBulletLists(content.content || "No content generated yet.")}
             </ReactMarkdown>
           </div>
         ) : (
