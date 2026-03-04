@@ -46,7 +46,38 @@ function parseJsonResponse<T>(text: string): T {
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   }
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // AI response was likely truncated at max_tokens — attempt to repair
+    // Close any unterminated string, then close all open braces/brackets
+    let repaired = cleaned;
+    // Count unescaped quotes to see if we're inside a string
+    const quotes = (repaired.match(/(?<!\\)"/g) || []).length;
+    if (quotes % 2 !== 0) {
+      repaired += '"';
+    }
+    // Close open arrays and objects
+    // Scan from start to figure out what needs closing
+    const stack: string[] = [];
+    let inString = false;
+    for (let i = 0; i < repaired.length; i++) {
+      const ch = repaired[i];
+      if (ch === '"' && (i === 0 || repaired[i - 1] !== '\\')) {
+        inString = !inString;
+      } else if (!inString) {
+        if (ch === '{') stack.push('}');
+        else if (ch === '[') stack.push(']');
+        else if (ch === '}' || ch === ']') stack.pop();
+      }
+    }
+    repaired += stack.reverse().join('');
+    try {
+      return JSON.parse(repaired);
+    } catch {
+      throw new Error(`Failed to parse AI response as JSON (truncated at ${text.length} chars). Try regenerating.`);
+    }
+  }
 }
 
 /**
@@ -603,7 +634,7 @@ export async function generateContent(options: GenerateContentOptions): Promise<
   const result = await generate({
     prompt,
     systemPrompt: SYSTEM_PROMPTS.contentGeneration,
-    maxTokens: 8192,
+    maxTokens: 16384,
     clientId: resolvedClientId,
     operation: "content_generation",
     briefId,
