@@ -25,6 +25,7 @@ const navigation = [
   { name: "Existing Content", href: "/dashboard/existing-content", icon: "📄" },
   { name: "Competitive Intel", href: "/dashboard/competitive-intelligence", icon: "🎯" },
   { name: "Briefs", href: "/dashboard/content", icon: "📝" },
+  { name: "Content Creation", href: "/dashboard/content/creation", icon: "✨" },
   { name: "Analytics", href: "/dashboard/analytics", icon: "📈" },
   { name: "Integrations", href: "/dashboard/integrations", icon: "🔌" },
   { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
