@@ -532,42 +532,47 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     .update({ status: "generating" })
     .eq("id", briefId);
 
-  // Enrich with fresh Frase SERP data for content generation
-  // All integrations are required — fail fast if unavailable
+  // Enrich with Frase SERP data — skip if the brief already has both datasets
+  // (avoids slow API round-trips on regeneration when data hasn't changed)
   let serpContentAnalysis = brief.serp_content_analysis;
   let semanticKeywords = brief.semantic_keywords;
+  const hasSerpData = !!serpContentAnalysis;
+  const hasSemanticData = !!semanticKeywords?.length;
 
-  const [serpResult, semanticResult] = await Promise.allSettled([
-    frase.analyzeSerp(brief.target_keyword, resolvedClientId),
-    !semanticKeywords?.length
-      ? frase.getSemanticKeywords(brief.target_keyword, resolvedClientId)
-      : Promise.resolve(null),
-  ]);
+  if (!hasSerpData || !hasSemanticData) {
+    const [serpResult, semanticResult] = await Promise.allSettled([
+      !hasSerpData
+        ? frase.analyzeSerp(brief.target_keyword, resolvedClientId)
+        : Promise.resolve(null),
+      !hasSemanticData
+        ? frase.getSemanticKeywords(brief.target_keyword, resolvedClientId)
+        : Promise.resolve(null),
+    ]);
 
-  if (serpResult.status === "rejected") {
-    // Reset brief status since generation failed before starting
-    await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
-    throw new Error(`Frase SERP analysis failed: ${serpResult.reason?.message || serpResult.reason}. Fix the integration before generating content.`);
-  }
-  if (semanticResult.status === "rejected") {
-    await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
-    throw new Error(`Frase semantic keywords failed: ${semanticResult.reason?.message || semanticResult.reason}. Fix the integration before generating content.`);
-  }
+    if (serpResult.status === "rejected") {
+      await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
+      throw new Error(`Frase SERP analysis failed: ${serpResult.reason?.message || serpResult.reason}. Fix the integration before generating content.`);
+    }
+    if (semanticResult.status === "rejected") {
+      await admin.from("content_briefs").update({ status: brief.status }).eq("id", briefId);
+      throw new Error(`Frase semantic keywords failed: ${semanticResult.reason?.message || semanticResult.reason}. Fix the integration before generating content.`);
+    }
 
-  if (serpResult.value) {
-    const serpData = summarizeSerpAnalysis(serpResult.value as Record<string, unknown>);
-    serpContentAnalysis = JSON.stringify(serpData);
-  }
+    if (serpResult.value) {
+      const serpData = summarizeSerpAnalysis(serpResult.value as Record<string, unknown>);
+      serpContentAnalysis = JSON.stringify(serpData);
+    }
 
-  if (semanticResult.value) {
-    const fraseKeywords = extractSemanticKeywords(semanticResult.value as Record<string, unknown>);
-    if (fraseKeywords?.length) {
-      const existing = new Set((semanticKeywords || []).map((k: string) => k.toLowerCase()));
-      const merged = [...(semanticKeywords || [])];
-      for (const kw of fraseKeywords) {
-        if (!existing.has(kw.toLowerCase())) merged.push(kw);
+    if (semanticResult.value) {
+      const fraseKeywords = extractSemanticKeywords(semanticResult.value as Record<string, unknown>);
+      if (fraseKeywords?.length) {
+        const existing = new Set((semanticKeywords || []).map((k: string) => k.toLowerCase()));
+        const merged = [...(semanticKeywords || [])];
+        for (const kw of fraseKeywords) {
+          if (!existing.has(kw.toLowerCase())) merged.push(kw);
+        }
+        semanticKeywords = merged;
       }
-      semanticKeywords = merged;
     }
   }
 
