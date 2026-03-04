@@ -112,12 +112,69 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
                 {brief.authority_signals}
               </div>
             )}
-            {brief.serp_content_analysis && (
-              <div>
-                <span className="font-medium">SERP Analysis:</span>{" "}
-                {brief.serp_content_analysis}
-              </div>
-            )}
+            {brief.serp_content_analysis && (() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let serpData: any = null;
+              try {
+                serpData = typeof brief.serp_content_analysis === "string"
+                  ? JSON.parse(brief.serp_content_analysis)
+                  : brief.serp_content_analysis;
+              } catch {}
+
+              if (!serpData) return (
+                <div>
+                  <span className="font-medium">SERP Analysis:</span>{" "}
+                  {String(brief.serp_content_analysis).slice(0, 200)}…
+                </div>
+              );
+
+              const pages = Array.isArray(serpData) ? serpData : serpData.pages || serpData.results || [];
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const questions = (serpData.questions || pages.flatMap((p: any) => p.questions || [])).filter(Boolean);
+              const avgWordCount = pages.length > 0
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ? Math.round(pages.reduce((sum: number, p: any) => sum + (Number(p.word_count || p.wordCount) || 0), 0) / pages.length)
+                : null;
+
+              return (
+                <div className="space-y-3">
+                  <span className="font-medium">SERP Analysis</span>
+                  {avgWordCount && (
+                    <div className="text-xs text-muted-foreground">
+                      Avg. competing page length: {avgWordCount.toLocaleString()} words
+                    </div>
+                  )}
+                  {pages.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Top Competing Pages</div>
+                      <ul className="space-y-1">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {pages.slice(0, 5).map((p: any, i: number) => (
+                          <li key={i} className="text-xs flex justify-between gap-2">
+                            <span className="truncate">{String(p.title || p.url || `Page ${i + 1}`)}</span>
+                            {(p.word_count || p.wordCount) && (
+                              <span className="text-muted-foreground whitespace-nowrap">
+                                {Number(p.word_count || p.wordCount).toLocaleString()} words
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {questions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Questions People Ask</div>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {questions.slice(0, 10).map((q: string, i: number) => (
+                          <li key={i} className="text-xs">{q}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {brief.ai_citation_opportunity && (
               <div>
                 <span className="font-medium">AI Citation Opportunity:</span>{" "}
@@ -156,11 +213,16 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {brief.semantic_keywords.map((kw, i) => (
+              {brief.semantic_keywords.slice(0, 20).map((kw, i) => (
                 <Badge key={i} variant="secondary">
                   {kw}
                 </Badge>
               ))}
+              {brief.semantic_keywords.length > 20 && (
+                <Badge variant="outline" className="text-muted-foreground">
+                  +{brief.semantic_keywords.length - 20} more
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>
