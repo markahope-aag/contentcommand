@@ -224,7 +224,12 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
     : "";
 
   const semanticKw = input.semanticKeywords?.length
-    ? `\n## Semantic Keywords to Include\n${input.semanticKeywords.join(", ")}`
+    ? `\n## Semantic / NLP Keywords (MUST include naturally throughout the article)
+These terms are extracted from top-ranking SERP competitors. Search engines expect content on this topic to include these terms. Work each term into the article at least 1-2 times in natural context. Do NOT keyword-stuff — use them where they fit organically.
+
+Terms: ${input.semanticKeywords.join(", ")}
+
+IMPORTANT: After writing, mentally check that each term above appears at least once. Missing many of these terms will significantly hurt the SEO score.`
     : "";
 
   const links = input.internalLinks?.length
@@ -247,7 +252,7 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
 - Title: ${input.briefTitle}
 - Target Keyword: ${input.targetKeyword}
 - Content Type: ${input.contentType}
-- Target Word Count: ${input.targetWordCount} (HARD CEILING — do not exceed by more than 10%. This word count was calculated from SERP competitor analysis. Prioritize depth within this limit rather than padding length.)
+- Target Word Count: ${input.targetWordCount} words (STRICT LIMIT — the article MUST be between ${Math.round(input.targetWordCount * 0.85)} and ${Math.round(input.targetWordCount * 1.10)} words. This target comes from SERP competitor analysis — top-ranking pages average this length. Going 2-3x over target actively hurts SEO ranking. If the target is 1500, write 1350-1650 words. Cut sections, reduce examples, or tighten prose to stay within range. NEVER pad content to fill length.)
 - Target Audience: ${input.targetAudience || "General audience"}
 - Unique Angle: ${input.uniqueAngle || "Not specified"}
 - Competitive Gap: ${input.competitiveGap || "Not specified"}
@@ -297,7 +302,7 @@ A standard markdown bulleted list (using \`- \` prefix, one item per line) with 
 
 ### 3. Body Sections (H2 and H3 headings)
 
-You MUST write ${Math.max(4, Math.ceil(input.targetWordCount / 400))} H2 body sections (excluding Key Takeaways, FAQ, and Conclusion). Each H2 section MUST contain:
+You MUST write ${Math.max(3, Math.min(8, Math.ceil(input.targetWordCount / 500)))} H2 body sections (excluding Key Takeaways, FAQ, and Conclusion). Stay within the target word count — fewer deeper sections are better than many shallow ones. Each H2 section MUST contain:
 
 **Substantive prose (3-5 paragraphs per H2):**
 - Each paragraph contains exactly ONE idea: topic sentence → evidence/example → analysis → bridge to next idea
@@ -343,7 +348,7 @@ ${input.targetWordCount >= 2500
 - Avoid overused metaphors like "art of strategy" — use concrete alternatives
 
 ### 4. Frequently Asked Questions (H2: "Frequently Asked Questions") — LAST section before Conclusion
-No more than 10 Q&A pairs, optimized for both FAQ schema and AI search citation:
+${input.targetWordCount <= 1500 ? "3-5" : input.targetWordCount <= 2500 ? "5-7" : "6-10"} Q&A pairs, optimized for both FAQ schema and AI search citation:
 - Each question is an **H3** heading phrased as a natural search query or "People Also Ask" question
 - Each answer starts with a **1-2 sentence direct answer** that stands alone as a complete, citable factual statement — this is what AI search engines will extract
 - Follow the direct answer with 1-2 sentences of supporting context, a specific example, or a metric
@@ -442,6 +447,9 @@ AI search engines like Perplexity, ChatGPT, and Google AI Overviews heavily favo
 
 ---
 
+## WORD COUNT CHECK (CRITICAL)
+Before finalizing, count your words. The article MUST be ${Math.round(input.targetWordCount * 0.85)}–${Math.round(input.targetWordCount * 1.10)} words. If you are over, cut entire FAQ entries, reduce case study detail, merge sections, or tighten prose. Do NOT submit content that exceeds the target by more than 10%.
+
 ## OUTPUT FORMAT
 
 Return your response as a JSON object:
@@ -498,6 +506,14 @@ ${input.content.substring(0, 8000)}
     "structured_data_feedback": "Heading hierarchy, content variety, and AI-parseable structure feedback"
   }
 }
+
+## WORD COUNT COMPLIANCE (applies to overall_score and seo_score)
+Target: ${input.targetWordCount} words. Actual: ${input.content.split(/\s+/).length} words.
+- Within ±15% of target: no penalty
+- 15-30% over/under: deduct 10 points from overall_score and seo_score
+- 30-50% over/under: deduct 20 points from overall_score and seo_score
+- 50%+ over/under: deduct 30 points from overall_score and seo_score
+Content that is 2-3x the target word count is severely bloated and cannot score above 60 overall regardless of other qualities. Search engines match content length to intent — grossly overshooting target length hurts rankings.
 
 ## READINESS ANALYSIS — Scoring Criteria (apply strictly)
 
