@@ -6,30 +6,30 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { GenerateButton } from "@/components/content/generate-button";
 import { RegenerateButton } from "@/components/content/regenerate-button";
 import { getAllContentBriefs, getContentQueue } from "@/lib/supabase/queries";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default async function ContentCreationPage() {
-  const [approvedResult, generatingResult, generatedResult, reviewingResult, revisionResult] =
+  const [approvedResult, generatedResult, reviewingResult, revisionResult, publishedResult] =
     await Promise.all([
       getAllContentBriefs({ status: "approved" }),
-      getAllContentBriefs({ status: "generating" }),
       getContentQueue({ status: "generated" }),
       getContentQueue({ status: "reviewing" }),
       getAllContentBriefs({ status: "revision_requested" }),
+      getContentQueue({ status: "published" }),
     ]);
 
   const approved = approvedResult.data;
-  const generating = generatingResult.data;
   const generated = generatedResult.data;
   const reviewing = reviewingResult.data;
   const revision = revisionResult.data;
+  const published = publishedResult.data;
 
   const isEmpty =
     approved.length === 0 &&
-    generating.length === 0 &&
     generated.length === 0 &&
     reviewing.length === 0 &&
-    revision.length === 0;
+    revision.length === 0 &&
+    published.length === 0;
 
   return (
     <div className="space-y-6">
@@ -78,32 +78,6 @@ export default async function ContentCreationPage() {
                     </div>
                   )}
                   <GenerateButton briefId={brief.id} />
-                </CardContent>
-              </Card>
-            ))}
-          </PipelineColumn>
-
-          {/* Generating */}
-          <PipelineColumn
-            title="Generating"
-            count={generating.length}
-            color="bg-yellow-500"
-          >
-            {generating.map((brief) => (
-              <Card key={brief.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm leading-tight">
-                    {brief.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    {brief.target_keyword}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-yellow-600">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Generating…
-                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -185,6 +159,50 @@ export default async function ContentCreationPage() {
                       <RegenerateButton briefId={brief.id} />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            ))}
+          </PipelineColumn>
+
+          {/* Published */}
+          <PipelineColumn
+            title="Published"
+            count={published.length}
+            color="bg-purple-500"
+          >
+            {published.map((item) => (
+              <Card key={item.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm leading-tight">
+                    <Link
+                      href={`/dashboard/content/generation/${item.id}`}
+                      className="hover:underline"
+                    >
+                      {item.title || "Untitled"}
+                    </Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    {item.content_briefs?.target_keyword || "—"}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    {item.word_count && (
+                      <span className="text-muted-foreground">
+                        {item.word_count} words
+                      </span>
+                    )}
+                    {item.quality_score != null && (
+                      <Badge variant="secondary" className="text-xs">
+                        Score: {item.quality_score}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full" asChild>
+                    <Link href={`/dashboard/content/generation/${item.id}`}>
+                      View
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ))}

@@ -195,6 +195,9 @@ export const contentGenerateSchema = z.object({
   briefId: z.string().uuid("Invalid briefId"),
   model: z.enum(["claude", "openai"]).optional(),
   feedback: z.string().max(5000).optional(),
+  readingLevel: z.enum(["general", "executive", "technical", "beginner"]).optional(),
+  writingStyle: z.enum(["analytical", "conversational", "provocative", "storytelling"]).optional(),
+  voice: z.enum(["authoritative", "collaborative", "journalistic", "practitioner"]).optional(),
 });
 
 // ── Content: Score ──────────────────────────────────────

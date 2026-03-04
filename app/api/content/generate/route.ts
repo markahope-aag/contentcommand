@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validation = validateBody(contentGenerateSchema, body);
     if (!validation.success) return validation.response;
-    const { briefId, model, feedback } = validation.data;
+    const { briefId, model, feedback, readingLevel, writingStyle, voice } = validation.data;
 
     // Verify access
     const { data: brief } = await supabase
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         .eq("id", briefId);
     }
 
-    const content = await generateContent({ briefId, model, clientId: brief.client_id, feedback });
+    const content = await generateContent({ briefId, model, clientId: brief.client_id, feedback, readingLevel, writingStyle, voice });
     return NextResponse.json({ data: content });
   } catch (error) {
     if (error instanceof RateLimitError) {

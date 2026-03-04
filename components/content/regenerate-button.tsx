@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
@@ -25,6 +32,10 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
   const [feedback, setFeedback] = useState(previousFeedback || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readingLevel, setReadingLevel] = useState("general");
+  const [writingStyle, setWritingStyle] = useState("analytical");
+  const [voice, setVoice] = useState("authoritative");
+  const [model, setModel] = useState("claude");
 
   async function handleRegenerate() {
     setLoading(true);
@@ -35,6 +46,10 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           briefId,
+          model,
+          readingLevel,
+          writingStyle,
+          voice,
           feedback: feedback.trim() || undefined,
         }),
       });
@@ -65,10 +80,66 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
         <DialogHeader>
           <DialogTitle>Regenerate Content</DialogTitle>
           <DialogDescription>
-            Provide feedback on what should be improved. The AI will use this alongside the original brief to create a better version.
+            Adjust the tone and style, and provide feedback on what should be improved.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-2">
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="regen-readingLevel">Reading Level</Label>
+              <Select value={readingLevel} onValueChange={setReadingLevel}>
+                <SelectTrigger id="regen-readingLevel">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="executive">Executive</SelectItem>
+                  <SelectItem value="technical">Technical</SelectItem>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="regen-writingStyle">Writing Style</Label>
+              <Select value={writingStyle} onValueChange={setWritingStyle}>
+                <SelectTrigger id="regen-writingStyle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="analytical">Analytical</SelectItem>
+                  <SelectItem value="conversational">Conversational</SelectItem>
+                  <SelectItem value="provocative">Provocative</SelectItem>
+                  <SelectItem value="storytelling">Storytelling</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="regen-voice">Voice</Label>
+              <Select value={voice} onValueChange={setVoice}>
+                <SelectTrigger id="regen-voice">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="authoritative">Authoritative</SelectItem>
+                  <SelectItem value="collaborative">Collaborative</SelectItem>
+                  <SelectItem value="journalistic">Journalistic</SelectItem>
+                  <SelectItem value="practitioner">Practitioner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="regen-model">AI Model</Label>
+              <Select value={model} onValueChange={setModel}>
+                <SelectTrigger id="regen-model">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="claude">Claude</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="feedback">What should be improved?</Label>
             <Textarea
@@ -76,7 +147,7 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="e.g., Make the introduction more compelling, add more specific data points, strengthen the conclusion..."
-              rows={5}
+              rows={4}
               maxLength={5000}
             />
             <p className="text-xs text-muted-foreground">
@@ -92,7 +163,14 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
             Cancel
           </Button>
           <Button onClick={handleRegenerate} disabled={loading}>
-            {loading ? "Generating..." : "Regenerate"}
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Generating…
+              </>
+            ) : (
+              "Regenerate"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

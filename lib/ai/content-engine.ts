@@ -36,6 +36,9 @@ interface GenerateContentOptions {
   model?: "claude" | "openai";
   clientId?: string;
   feedback?: string;
+  readingLevel?: "general" | "executive" | "technical" | "beginner";
+  writingStyle?: "analytical" | "conversational" | "provocative" | "storytelling";
+  voice?: "authoritative" | "collaborative" | "journalistic" | "practitioner";
 }
 
 function parseJsonResponse<T>(text: string): T {
@@ -503,7 +506,7 @@ export async function generateBrief(options: GenerateBriefOptions): Promise<Cont
 }
 
 export async function generateContent(options: GenerateContentOptions): Promise<GeneratedContent> {
-  const { briefId, model = "claude", clientId, feedback } = options;
+  const { briefId, model = "claude", clientId, feedback, readingLevel, writingStyle, voice } = options;
   const supabase = await createClient();
 
   // Fetch brief
@@ -584,6 +587,9 @@ export async function generateContent(options: GenerateContentOptions): Promise<
     brandVoice: brief.client_voice_profile,
     serpContentAnalysis,
     feedback,
+    readingLevel,
+    writingStyle,
+    voice,
   });
 
   const startTime = Date.now();

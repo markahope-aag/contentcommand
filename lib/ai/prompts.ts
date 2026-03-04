@@ -34,6 +34,9 @@ interface ContentGenerationInput {
   brandVoice: Record<string, unknown> | null;
   serpContentAnalysis: string | null;
   feedback?: string | null;
+  readingLevel?: "general" | "executive" | "technical" | "beginner";
+  writingStyle?: "analytical" | "conversational" | "provocative" | "storytelling";
+  voice?: "authoritative" | "collaborative" | "journalistic" | "practitioner";
 }
 
 interface QualityScoringInput {
@@ -157,6 +160,53 @@ Return your response as a JSON object with exactly these fields:
 Return ONLY the JSON object, no markdown fences or explanation.`;
 }
 
+function buildContentTuningSection(
+  readingLevel?: string,
+  writingStyle?: string,
+  voice?: string,
+): string {
+  // Skip entirely if all defaults
+  if (!readingLevel && !writingStyle && !voice) return "";
+
+  const readingLevelInstructions: Record<string, string> = {
+    general: "Write for a general business audience. Use clear, accessible language. Assume familiarity with common business concepts but define specialized terms. Aim for a college-educated reading level.",
+    executive: "Write for C-suite executives and senior decision-makers. Lead with strategic implications, ROI, and bottom-line impact. Use concise, high-density prose — no filler. Assume deep business acumen but not necessarily domain expertise. Favor data-driven arguments and strategic frameworks.",
+    technical: "Write for technical practitioners and subject-matter experts. Use precise domain terminology without over-explaining fundamentals. Include implementation details, architecture considerations, and technical trade-offs. Assume the reader has hands-on experience in the field.",
+    beginner: "Write for readers new to this topic. Define every term on first use. Use analogies and real-world examples to explain abstract concepts. Break complex ideas into digestible steps. Avoid assumed knowledge — build understanding progressively from foundations up.",
+  };
+
+  const writingStyleInstructions: Record<string, string> = {
+    analytical: "Use a structured, evidence-driven approach. Build arguments methodically with data, frameworks, and logical progression. Favor comparison tables, numbered analyses, and systematic evaluations. Each claim should be supported by specific evidence.",
+    conversational: "Write in a warm, engaging tone that feels like a knowledgeable colleague explaining over coffee. Use rhetorical questions, relatable scenarios, and occasional humor. Maintain authority through expertise, not formality. Use contractions and direct address ('you').",
+    provocative: "Lead with bold, contrarian positions that challenge conventional wisdom. Open sections with surprising claims, then back them with rigorous evidence. Use tension and debate to keep readers engaged. Don't hedge — take clear stances and defend them with data.",
+    storytelling: "Structure arguments around narrative arcs — real company journeys, before/after transformations, cautionary tales. Lead each section with a concrete story, then extract lessons and frameworks. Make data memorable by embedding it in human narratives.",
+  };
+
+  const voiceInstructions: Record<string, string> = {
+    authoritative: "Write from a position of established expertise. Use confident, declarative statements. Reference 'our analysis', 'industry data confirms', 'the evidence demonstrates'. Project the authority of a recognized thought leader publishing in a top-tier business journal.",
+    collaborative: "Write as a peer sharing insights with fellow professionals. Use inclusive language: 'we', 'our industry', 'teams like yours'. Acknowledge complexity and trade-offs honestly. Position the reader as a capable professional who benefits from shared perspective, not instruction.",
+    journalistic: "Write with the objectivity and rigor of investigative journalism. Present multiple viewpoints fairly, cite sources meticulously, and let evidence drive conclusions. Use the inverted pyramid — most important findings first. Attribute claims specifically and verify with multiple sources.",
+    practitioner: "Write from the trenches — as someone who has implemented, failed, iterated, and succeeded. Use first-person experience: 'in practice, we found...', 'the implementation challenge most teams miss...', 'after deploying this across 12 client engagements...'. Prioritize hard-won practical wisdom over theoretical frameworks.",
+  };
+
+  const parts: string[] = ["## Content Tuning\nApply the following stylistic adjustments to the entire article:\n"];
+
+  if (readingLevel && readingLevel !== "general" && readingLevelInstructions[readingLevel]) {
+    parts.push(`**Reading Level — ${readingLevel}:** ${readingLevelInstructions[readingLevel]}`);
+  }
+  if (writingStyle && writingStyle !== "analytical" && writingStyleInstructions[writingStyle]) {
+    parts.push(`**Writing Style — ${writingStyle}:** ${writingStyleInstructions[writingStyle]}`);
+  }
+  if (voice && voice !== "authoritative" && voiceInstructions[voice]) {
+    parts.push(`**Voice — ${voice}:** ${voiceInstructions[voice]}`);
+  }
+
+  // If only defaults were selected, skip the section
+  if (parts.length === 1) return "";
+
+  return "\n" + parts.join("\n\n");
+}
+
 export function buildContentGenerationPrompt(input: ContentGenerationInput): string {
   const sections = input.requiredSections?.length
     ? `\n## Required Sections\n${input.requiredSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}`
@@ -177,6 +227,8 @@ export function buildContentGenerationPrompt(input: ContentGenerationInput): str
   const feedbackSection = input.feedback
     ? `\n## Revision Feedback\nThe previous version of this content received the following feedback. Address every point in this revision:\n${input.feedback}\n`
     : "";
+
+  const tuningSection = buildContentTuningSection(input.readingLevel, input.writingStyle, input.voice);
 
   return `You are an expert content strategist and writer. You produce long-form, editorial-quality articles optimized for both traditional search (SEO) and AI search engines (GEO/AEO). Your writing combines the analytical depth of Harvard Business Review with the accessibility of a senior consultant briefing a knowledgeable client. You write personality-driven, opinionated prose — never bland, generic, or corporate filler.
 
@@ -202,6 +254,7 @@ ${input.controversialPositions || "Take well-reasoned positions backed by data"}
 ${input.serpContentAnalysis || "No SERP analysis available"}
 ${brandVoice}
 ${feedbackSection}
+${tuningSection}
 
 ---
 
