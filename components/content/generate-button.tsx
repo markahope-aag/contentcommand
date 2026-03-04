@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { GenerationProgress } from "@/components/content/generation-progress";
 
 interface GenerateButtonProps {
   briefId: string;
@@ -138,6 +139,7 @@ export function GenerateButton({ briefId, className }: GenerateButtonProps) {
             <p className="text-sm text-destructive">{error}</p>
           )}
         </div>
+        <GenerationProgress isActive={loading} />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel

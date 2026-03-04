@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { GenerationProgress } from "@/components/content/generation-progress";
 
 interface RegenerateButtonProps {
   briefId: string;
@@ -158,6 +159,7 @@ export function RegenerateButton({ briefId, previousFeedback }: RegenerateButton
             <p className="text-sm text-destructive">{error}</p>
           )}
         </div>
+        <GenerationProgress isActive={loading} />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel

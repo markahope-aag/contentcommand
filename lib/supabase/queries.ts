@@ -1074,9 +1074,13 @@ export async function createShareToken(contentId: string): Promise<string> {
     .eq("id", contentId)
     .single();
 
-  if (existing?.share_token) return existing.share_token;
+  // Return existing short token; replace old UUID-style tokens with short ones
+  if (existing?.share_token && existing.share_token.length <= 12) {
+    return existing.share_token;
+  }
 
-  const token = crypto.randomUUID();
+  // Short URL-friendly token (8 chars)
+  const token = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
   const { error } = await admin
     .from("generated_content")
     .update({ share_token: token })
